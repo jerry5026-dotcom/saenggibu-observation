@@ -1003,10 +1003,7 @@ function buildPrompts(ctx) {
   const actSection    = actType ? `수행평가 유형: ${actType}\n`          : '';
   const topicSection  = topic   ? `단원/주제: ${topic}\n`               : '';
 
-  const MAX = 8000;
-  const body = content.length > MAX
-    ? content.slice(0, MAX) + '\n\n[⚠ 내용이 길어 일부 생략됨]'
-    : content;
+  const body = content;
 
   const prompt = `## 수업 정보
 과목: ${subject}
