@@ -1066,25 +1066,24 @@ async function startAnalysis() {
   container.innerHTML = '';
   document.getElementById('globalAct').style.display = 'none';
 
-  // 파일 → 학생 task 목록으로 평탄화
-  // 예: 모둠 파일(4명) + 개인 파일(1명) → 5개 task
+  // 파일 1개 → task 1개 (모둠 파일도 동일하게 1회 요약)
   const tasks = [];
   files.forEach((file, fi) => {
     const { students, title, isGroup } = getStudentsFromFile(file);
-    students.forEach((studentName, si) => {
-      tasks.push({ file, studentName, title, isGroup, cid: `rc-${fi}-${si}` });
-    });
+    const key         = isGroup ? title || file.name.replace(/\.[^.]+$/, '') : students[0];
+    const displayName = isGroup ? `${title} (${students.join(', ')})` : students[0];
+    tasks.push({ file, studentName: key, displayName, title, isGroup, cid: `rc-${fi}` });
   });
 
   // Placeholder cards (모두)
   tasks.forEach(t => {
-    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.file, t.studentName, t.isGroup));
+    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.file, t.displayName, t.isGroup));
   });
 
   // 파일별로 처리 (같은 파일은 한 번만 파싱)
   let prevFile = null, parsedContent = '';
   for (const task of tasks) {
-    const { file, studentName, title, isGroup, cid } = task;
+    const { file, studentName, displayName, title, isGroup, cid } = task;
 
     setStatus(cid, 'running', '파일 읽는 중...');
     setProg(cid, 10);
@@ -1168,11 +1167,12 @@ function parseVersions(text) {
 function renderVersionCards(versions, charLimit, studentName) {
   const en = studentName.replace(/'/g, "\\'");
   const cards = versions.map((v, i) => {
-    const over = v.length > charLimit;
+    const lines    = v.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const copyText = lines.join(' ');   // 줄바꿈 없이 이어붙이기
+    const over     = copyText.length > charLimit;
     const countBg    = over ? '#fee2e2' : '#dcfce7';
     const countColor = over ? '#b91c1c' : '#15803d';
-    const lines = v.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const sentences = lines.map((line, li) => `
+    const sentences  = lines.map((line, li) => `
       <div class="obs-sentence">
         <span class="obs-num">${li + 1}</span>
         <span class="obs-line">${esc(line)}</span>
@@ -1182,11 +1182,11 @@ function renderVersionCards(versions, charLimit, studentName) {
       <div class="copy-preview-label" style="margin-bottom:8px;">
         📋 버전 ${i + 1}
         <span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:99px; background:${countBg}; color:${countColor};">
-          ${v.length}자 / ${charLimit}자
+          ${copyText.length}자 / ${charLimit}자
         </span>
       </div>
       ${sentences}
-      <div class="copy-preview" style="margin-top:10px;">${esc(v)}</div>
+      <div class="copy-preview" style="margin-top:10px;">${esc(copyText)}</div>
       <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
         <button class="btn btn-copy btn-sm" onclick="copyVersion('${en}', ${i})">
           📋 버전 ${i + 1} 복사
@@ -1265,7 +1265,9 @@ function setProg(cid, pct) {
 /* ── Copy / Export ── */
 function copyVersion(name, idx) {
   const v = results[name];
-  const text = Array.isArray(v) ? (v[idx] ?? v[0] ?? '') : v;
+  const raw = Array.isArray(v) ? (v[idx] ?? v[0] ?? '') : v;
+  // 줄바꿈 없이 문장 이어붙이기
+  const text = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0).join(' ');
   navigator.clipboard.writeText(text)
     .then(() => toast(`버전 ${idx + 1} 복사 완료! 생기부 작성 도우미의 수업 관찰 내용란에 붙여넣으세요.`, 'success'))
     .catch(() => toast('복사 실패 — 브라우저 권한을 확인해주세요', 'error'));
