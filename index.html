@@ -717,21 +717,16 @@ async function parseFile(file) {
   throw new Error('지원하지 않는 형식');
 }
 
-/* ── 환경 감지 ── */
-const IS_LOCAL = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
-// localhost → 로컬 프록시 경유 / 그 외(GitHub Pages 등) → Anthropic 직접 호출
-
 /* ── Claude API ── */
 async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onError}) {
-  const url     = IS_LOCAL ? 'http://localhost:8888/proxy' : 'https://api.anthropic.com/v1/messages';
-  const headers = IS_LOCAL
-    ? { 'content-type': 'application/json', 'X-Api-Key': apiKey }
-    : { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
-
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers,
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
         model,
         max_tokens: 1500,
@@ -767,12 +762,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
     }
     onDone();
   } catch (err) {
-    const msg = err.message || String(err);
-    if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('NetworkError')) {
-      onError('서버에 연결할 수 없습니다.\n\n해결 방법: 브라우저를 닫고 폴더 안의 【시작.bat】을 더블클릭하여 프로그램을 실행하세요.');
-    } else {
-      onError(msg);
-    }
+    onError(err.message || String(err));
   }
 }
 
