@@ -404,6 +404,30 @@
     .divider {
       height:1px; background:#e2e8f0; margin: 10px 0;
     }
+
+    /* ── Activity type checkboxes ── */
+    .act-cb-group {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 9px 10px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+    }
+    .act-cb {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 99px;
+      font-size: .78rem; font-weight: 600; color: #475569;
+      background: #fff; cursor: pointer;
+      transition: all .15s; user-select: none;
+    }
+    .act-cb:hover { border-color: #93c5fd; color: #1e40af; background: #eff6ff; }
+    .act-cb input[type="checkbox"] { display: none; }
+    .act-cb.checked {
+      background: #1e40af; color: #fff;
+      border-color: #1e40af;
+    }
   </style>
 </head>
 <body>
@@ -456,18 +480,17 @@
       <input type="text" id="subject" placeholder="예: 통합사회, 생명과학Ⅱ, 영어독해..." />
 
       <div style="margin-top:10px;">
-        <label class="fl">수행평가 활동 유형 <span style="font-weight:400;color:#94a3b8;">(선택)</span></label>
-        <select id="activityType">
-          <option value="">선택하지 않음</option>
-          <option value="보고서 작성">보고서 작성</option>
-          <option value="발표 및 PPT 제작">발표 및 PPT 제작</option>
-          <option value="실험·탐구 보고서">실험·탐구 보고서</option>
-          <option value="논술형 글쓰기">논술형 글쓰기</option>
-          <option value="프로젝트 활동">프로젝트 활동</option>
-          <option value="독서 감상문">독서 감상문</option>
-          <option value="토론·토의 활동">토론·토의 활동</option>
-          <option value="포트폴리오">포트폴리오</option>
-        </select>
+        <label class="fl">수행평가 활동 유형 <span style="font-weight:400;color:#94a3b8;">(중복 선택 가능)</span></label>
+        <div class="act-cb-group" id="activityTypeGroup">
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="보고서 작성">보고서 작성</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="발표 및 PPT 제작">발표 및 PPT 제작</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="실험·탐구 보고서">실험·탐구 보고서</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="논술형 글쓰기">논술형 글쓰기</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="프로젝트 활동">프로젝트 활동</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="독서 감상문">독서 감상문</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="토론·토의 활동">토론·토의 활동</label>
+          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="포트폴리오">포트폴리오</label>
+        </div>
       </div>
 
       <div style="margin-top:10px;">
@@ -638,8 +661,34 @@ async function _clearAllFiles() {
   });
 }
 
+/* ── 활동 유형 체크박스 ── */
+function toggleAct(label) {
+  const cb = label.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  label.classList.toggle('checked', cb.checked);
+  _saveActTypes();
+}
+function _saveActTypes() {
+  const vals = [...document.querySelectorAll('#activityTypeGroup input:checked')]
+    .map(cb => cb.value);
+  localStorage.setItem('app_activityTypes', JSON.stringify(vals));
+}
+function _restoreActTypes() {
+  try {
+    const vals = JSON.parse(localStorage.getItem('app_activityTypes') || '[]');
+    document.querySelectorAll('#activityTypeGroup .act-cb').forEach(label => {
+      const cb = label.querySelector('input');
+      if (vals.includes(cb.value)) { cb.checked = true; label.classList.add('checked'); }
+    });
+  } catch {}
+}
+function getActType() {
+  return [...document.querySelectorAll('#activityTypeGroup input:checked')]
+    .map(cb => cb.value).join(', ');
+}
+
 /* ── localStorage 자동 저장 헬퍼 ── */
-const LS_FIELDS = ['subject','activityType','topic','rubric','extraNote','lengthOption'];
+const LS_FIELDS = ['subject','topic','rubric','extraNote','lengthOption'];
 function _saveField(id) {
   const el = document.getElementById(id);
   if (el) localStorage.setItem('app_' + id, el.value);
@@ -650,6 +699,7 @@ function _restoreFields() {
     const el = document.getElementById(id);
     if (v !== null && el) el.value = v;
   });
+  _restoreActTypes();
   // 채점 기준 파일 chip 복원
   const rf = localStorage.getItem('app_rubric_file');
   const re = localStorage.getItem('app_rubric_file_ext');
@@ -690,7 +740,7 @@ function _restoreFields() {
     if (el) el.addEventListener('change', () => _saveField(id));
   });
   ['apiKey','subject','rubric'].forEach(id =>
-    document.getElementById(id).addEventListener('input', syncBtn)
+    document.getElementById(id)?.addEventListener('input', syncBtn)
   );
 
   // IndexedDB에서 파일 복원
@@ -821,16 +871,26 @@ function renderFileList() {
 
 /* ── Parsers ── */
 async function parsePDF(file) {
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
-  let out = '';
-  for (let p=1; p<=pdf.numPages; p++) {
-    const pg = await pdf.getPage(p);
-    const tc = await pg.getTextContent();
-    const line = tc.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
-    if (line) out += `[${p}페이지] ${line}\n`;
+  try {
+    const buf = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buf),
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    const pdf = await loadingTask.promise;
+    let out = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const pg = await pdf.getPage(p);
+      const tc = await pg.getTextContent();
+      const line = tc.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+      if (line) out += `[${p}페이지] ${line}\n`;
+    }
+    return out || '(텍스트를 추출할 수 없습니다 — 이미지 스캔 PDF이거나 보호된 파일일 수 있습니다)';
+  } catch (err) {
+    throw new Error('PDF 읽기 실패: ' + err.message);
   }
-  return out || '(텍스트 추출 실패)';
 }
 async function parseDOCX(file) {
   const buf = await file.arrayBuffer();
@@ -941,9 +1001,9 @@ function buildPrompts(ctx) {
   const actSection    = actType ? `수행평가 유형: ${actType}\n`          : '';
   const topicSection  = topic   ? `단원/주제: ${topic}\n`               : '';
 
-  const MAX = 55000;
+  const MAX = 8000;
   const body = content.length > MAX
-    ? content.slice(0, MAX) + '\n\n[⚠ 내용이 너무 길어 일부 생략]'
+    ? content.slice(0, MAX) + '\n\n[⚠ 내용이 길어 일부 생략됨]'
     : content;
 
   const prompt = `## 수업 정보
@@ -974,7 +1034,7 @@ async function startAnalysis() {
   const apiKey   = document.getElementById('apiKey').value.trim();
   const model    = document.getElementById('modelSelect').value;
   const subject  = document.getElementById('subject').value.trim();
-  const actType  = document.getElementById('activityType').value;
+  const actType  = getActType();
   const topic    = document.getElementById('topic').value.trim();
   const rubric   = document.getElementById('rubric').value.trim();
   const extra    = document.getElementById('extraNote').value.trim();
@@ -1091,6 +1151,11 @@ async function startAnalysis() {
       document.getElementById(`${cid}-body`).innerHTML =
         `<p style="color:#b91c1c;font-size:.83rem;">❌ ${esc(err.message)}</p>`;
       setStatus(cid, 'error', '오류 발생');
+    }
+
+    // 연속 요청 시 Rate Limit 방지용 딜레이 (마지막 task 제외)
+    if (task !== tasks[tasks.length - 1]) {
+      await new Promise(r => setTimeout(r, 2000));
     }
   }
 
