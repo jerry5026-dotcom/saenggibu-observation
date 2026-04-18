@@ -588,13 +588,93 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let files   = [];
 let results = {};  // name -> { raw, sections }
 
+/* ── IndexedDB (학생 파일 영속 저장) ── */
+const _DB_NAME = 'saenggibu_db', _DB_VER = 1, _STORE = 'student_files';
+function _openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(_DB_NAME, _DB_VER);
+    r.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(_STORE))
+        db.createObjectStore(_STORE, { keyPath: 'name' });
+    };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = e => rej(e.target.error);
+  });
+}
+async function _saveFile(file) {
+  const buf = await file.arrayBuffer();
+  const db  = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(_STORE, 'readwrite');
+    tx.objectStore(_STORE).put({ name: file.name, type: file.type, buf });
+    tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
+  });
+}
+async function _deleteFile(name) {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(_STORE, 'readwrite');
+    tx.objectStore(_STORE).delete(name);
+    tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
+  });
+}
+async function _loadAllFiles() {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(_STORE, 'readonly');
+    const req = tx.objectStore(_STORE).getAll();
+    req.onsuccess = e =>
+      res(e.target.result.map(r => new File([r.buf], r.name, { type: r.type })));
+    req.onerror = e => rej(e.target.error);
+  });
+}
+async function _clearAllFiles() {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(_STORE, 'readwrite');
+    tx.objectStore(_STORE).clear();
+    tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
+  });
+}
+
+/* ── localStorage 자동 저장 헬퍼 ── */
+const LS_FIELDS = ['subject','activityType','topic','rubric','extraNote','lengthOption'];
+function _saveField(id) {
+  const el = document.getElementById(id);
+  if (el) localStorage.setItem('app_' + id, el.value);
+}
+function _restoreFields() {
+  LS_FIELDS.forEach(id => {
+    const v = localStorage.getItem('app_' + id);
+    const el = document.getElementById(id);
+    if (v !== null && el) el.value = v;
+  });
+  // 채점 기준 파일 chip 복원
+  const rf = localStorage.getItem('app_rubric_file');
+  const re = localStorage.getItem('app_rubric_file_ext');
+  if (rf) {
+    document.getElementById('rubricChip').innerHTML = `
+      <div class="file-chip">
+        <span>${re==='pdf'?'📕':'📘'}</span>
+        <span class="fc-name">${esc(rf)}</span>
+        <button onclick="clearRubric()">✕</button>
+      </div>`;
+  }
+}
+
 /* ── Init ── */
-(function () {
+(async function () {
+  // API 키 · 모델
   const k = localStorage.getItem('anthro_key');
   const m = localStorage.getItem('anthro_model');
   if (k) document.getElementById('apiKey').value = k;
   if (m) document.getElementById('modelSelect').value = m;
 
+  // 텍스트 필드 복원
+  _restoreFields();
+
+  // 드래그 앤 드롭
   const dz = document.getElementById('dropZone');
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
@@ -603,9 +683,26 @@ let results = {};  // name -> { raw, sections }
     handleFiles(e.dataTransfer.files);
   });
 
+  // 입력 시 자동 저장
+  LS_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input',  () => _saveField(id));
+    if (el) el.addEventListener('change', () => _saveField(id));
+  });
   ['apiKey','subject','rubric'].forEach(id =>
     document.getElementById(id).addEventListener('input', syncBtn)
   );
+
+  // IndexedDB에서 파일 복원
+  try {
+    const saved = await _loadAllFiles();
+    if (saved.length) {
+      files = saved;
+      renderFileList();
+      syncBtn();
+      toast(`${saved.length}개 파일이 복원되었습니다`, 'info');
+    }
+  } catch (e) { /* 조용히 무시 */ }
 })();
 
 function syncBtn() {
@@ -656,12 +753,18 @@ async function loadRubricFile(file) {
         <span class="fc-name">${esc(file.name)}</span>
         <button onclick="clearRubric()">✕</button>
       </div>`;
+    localStorage.setItem('app_rubric_file', file.name);
+    localStorage.setItem('app_rubric_file_ext', e);
+    localStorage.setItem('app_rubric', text);
     toast('채점 기준을 불러왔습니다', 'success');
   } catch (err) { toast('읽기 실패: '+err.message, 'error'); }
 }
 function clearRubric() {
   document.getElementById('rubricChip').innerHTML = '';
   document.getElementById('rubric').value = '';
+  localStorage.removeItem('app_rubric_file');
+  localStorage.removeItem('app_rubric_file_ext');
+  localStorage.removeItem('app_rubric');
 }
 
 /* ── 파일명에서 학생 이름 추출 ── */
@@ -684,11 +787,19 @@ function handleFiles(list) {
     if (!['pdf','docx','pptx'].includes(e)) {
       toast(`${f.name}: PDF·DOCX·PPTX만 지원합니다`, 'error'); continue;
     }
-    if (!files.find(x => x.name === f.name)) files.push(f);
+    if (!files.find(x => x.name === f.name)) {
+      files.push(f);
+      _saveFile(f).catch(() => {});
+    }
   }
   renderFileList(); syncBtn();
 }
-function removeFile(i) { files.splice(i, 1); renderFileList(); syncBtn(); }
+function removeFile(i) {
+  const name = files[i].name;
+  files.splice(i, 1);
+  _deleteFile(name).catch(() => {});
+  renderFileList(); syncBtn();
+}
 function renderFileList() {
   const el = document.getElementById('fileList');
   if (!files.length) { el.innerHTML = ''; return; }
@@ -1088,6 +1199,7 @@ function clearAll() {
   document.getElementById('resultsContainer').innerHTML = '';
   document.getElementById('globalAct').style.display = 'none';
   document.getElementById('guideCard').style.display = 'block';
+  // 분석 결과만 초기화 (파일·설정은 유지)
 }
 
 /* ── Toast ── */
