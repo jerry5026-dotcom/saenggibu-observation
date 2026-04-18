@@ -476,13 +476,13 @@
       </div>
 
       <div style="margin-top:10px;">
-        <label class="fl">관찰 문장 수</label>
+        <label class="fl">글자 수 제한</label>
         <select id="lengthOption">
-          <option value="short">간결형 — 4~5문장 (핵심만 압축)</option>
-          <option value="medium" selected>보통형 — 6~8문장 (권장)</option>
-          <option value="long">상세형 — 9~12문장 (풍부한 맥락)</option>
+          <option value="100">100자 이내 (핵심 압축)</option>
+          <option value="200" selected>200자 이내 (권장)</option>
+          <option value="300">300자 이내 (상세)</option>
         </select>
-        <p class="hint">문장 수가 많을수록 도우미가 다양한 역량을 반영한 생기부 문장을 생성합니다.</p>
+        <p class="hint">생기부 세특 입력란 글자 수에 맞게 선택하세요.</p>
       </div>
     </div>
 
@@ -801,7 +801,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
 function buildPrompts(ctx) {
   const { subject, actType, topic, rubric, extra, studentName, content, lengthOpt, isGroup, groupTitle } = ctx;
 
-  const sentenceCount = { short: '4~5', medium: '6~8', long: '9~12' }[lengthOpt] || '6~8';
+  const charLimit = parseInt(lengthOpt) || 200;
 
   const system = `당신은 교사의 학교생활기록부 세부능력 및 특기사항(세특) 작성을 돕는 전문 AI입니다.
 학생의 수행평가 결과물을 분석하여, 생기부 작성 도우미의 "수업 관찰 내용" 입력란에 붙여넣을 텍스트를 생성합니다.
@@ -847,12 +847,13 @@ ${body}
 위 결과물을 꼼꼼히 분석하여 생기부 도우미 "수업 관찰 내용" 입력란용 텍스트를 작성하세요.
 
 조건:
-- ${sentenceCount}개 문장으로 구성
+- 전체 글자 수(공백 포함) ${charLimit}자 이내로 반드시 작성 (이것이 최우선 조건)
 - 각 문장은 반드시 "~함." 또는 "~임."으로 종결
 - 문장마다 줄바꿈으로 구분
 - 헤더, 번호, [괄호], 기호 등 일절 사용 금지
 - 학생이 결과물에서 실제로 다룬 내용(주장, 분석, 결론, 개념, 근거, 아이디어)을 최대한 구체적으로 담을 것
-- 채점 기준의 각 항목에 해당하는 내용을 빠짐없이 반영할 것`;
+- 채점 기준의 각 항목에 해당하는 내용을 ${charLimit}자 안에 압축하여 반영할 것
+- 글자 수 초과 금지 — ${charLimit}자를 넘으면 안 됨`;
 
   return { system, prompt };
 }
@@ -947,6 +948,9 @@ async function startAnalysis() {
             document.getElementById(`${cid}-body`).insertAdjacentHTML('beforeend', `
               <div class="copy-preview-label" style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0;">
                 📋 수업 관찰 내용란에 붙여넣을 텍스트
+                <span style="margin-left:auto; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:99px; background:${fullText.length > (parseInt(lengthOpt) || 200) ? '#fee2e2' : '#dcfce7'}; color:${fullText.length > (parseInt(lengthOpt) || 200) ? '#b91c1c' : '#15803d'};">
+                  ${fullText.length}자 / ${lengthOpt}자
+                </span>
               </div>
               <div class="copy-preview" id="${cid}-preview">${esc(fullText)}</div>
               <div class="act-row">
