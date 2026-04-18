@@ -384,6 +384,17 @@
     #toast.error   { background:#fee2e2; color:#b91c1c; }
     #toast.info    { background:#dbeafe; color:#1d4ed8; }
 
+    /* ── Group badge ── */
+    .group-badge {
+      font-size: .72rem;
+      color: #1d4ed8;
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: 99px;
+      padding: 1px 8px;
+      font-weight: 600;
+    }
+
     ::-webkit-scrollbar { width:6px; }
     ::-webkit-scrollbar-track { background:transparent; }
     ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
@@ -653,6 +664,19 @@ function clearRubric() {
   document.getElementById('rubric').value = '';
 }
 
+/* ── 파일명에서 학생 이름 추출 ── */
+function getStudentsFromFile(file) {
+  const base = file.name.replace(/\.[^.]+$/, '');
+  // "제목-이름1,이름2,이름3" 또는 "이름1,이름2,이름3" 패턴 감지
+  const dashIdx = base.lastIndexOf('-');
+  const namePart = dashIdx >= 0 ? base.slice(dashIdx + 1) : base;
+  const title    = dashIdx >= 0 ? base.slice(0, dashIdx).trim() : base;
+  const names    = namePart.split(/[,，]/).map(s => s.trim()).filter(s => s.length >= 1);
+  return names.length > 1
+    ? { title, students: names, isGroup: true }
+    : { title: base, students: [base], isGroup: false };
+}
+
 /* ── Student files ── */
 function handleFiles(list) {
   for (const f of list) {
@@ -660,20 +684,28 @@ function handleFiles(list) {
     if (!['pdf','docx','pptx'].includes(e)) {
       toast(`${f.name}: PDF·DOCX·PPTX만 지원합니다`, 'error'); continue;
     }
-    if (!files.find(x => x.name===f.name)) files.push(f);
+    if (!files.find(x => x.name === f.name)) files.push(f);
   }
   renderFileList(); syncBtn();
 }
-function removeFile(i) { files.splice(i,1); renderFileList(); syncBtn(); }
+function removeFile(i) { files.splice(i, 1); renderFileList(); syncBtn(); }
 function renderFileList() {
   const el = document.getElementById('fileList');
-  el.innerHTML = files.map((f,i) => `
-    <div class="f-chip">
+  if (!files.length) { el.innerHTML = ''; return; }
+  el.innerHTML = files.map((f, i) => {
+    const { students, isGroup } = getStudentsFromFile(f);
+    const badge = isGroup
+      ? `<span class="group-badge">모둠 ${students.length}명: ${students.join(', ')}</span>`
+      : '';
+    return `
+    <div class="f-chip" style="flex-wrap:wrap; gap:6px;">
       <span>${ficon(f.name)}</span>
       <span class="fn" title="${esc(f.name)}">${esc(f.name)}</span>
       <span class="fs">${fsize(f.size)}</span>
       <button class="fd" onclick="removeFile(${i})">✕</button>
-    </div>`).join('');
+      ${badge ? `<div style="width:100%; padding-left:24px;">${badge}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 /* ── Parsers ── */
@@ -725,7 +757,8 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
       headers: {
         'content-type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-ipc': 'true'
       },
       body: JSON.stringify({
         model,
@@ -768,7 +801,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
 
 /* ── Build system + prompt ── */
 function buildPrompts(ctx) {
-  const { subject, actType, topic, rubric, extra, studentName, content, lengthOpt } = ctx;
+  const { subject, actType, topic, rubric, extra, studentName, content, lengthOpt, isGroup, groupTitle } = ctx;
 
   const sentenceCount = { short: '4~5', medium: '6~8', long: '9~12' }[lengthOpt] || '6~8';
 
@@ -807,7 +840,7 @@ function buildPrompts(ctx) {
   const prompt = `## 수업 정보
 과목: ${subject}
 ${actSection}${topicSection}${rubricSection}${extraSection}
-## 학생 결과물 (파일명: ${studentName})
+## 학생 결과물${isGroup ? ` (모둠 과제: ${groupTitle} / 대상 학생: ${studentName})` : ` (학생: ${studentName})`}
 
 ${body}
 
@@ -853,26 +886,38 @@ async function startAnalysis() {
   container.innerHTML = '';
   document.getElementById('globalAct').style.display = 'none';
 
-  // Placeholder cards
-  files.forEach((f, i) => {
-    const name = f.name.replace(/\.[^.]+$/, '');
-    container.insertAdjacentHTML('beforeend', placeholderCard(i, f, name));
+  // 파일 → 학생 task 목록으로 평탄화
+  // 예: 모둠 파일(4명) + 개인 파일(1명) → 5개 task
+  const tasks = [];
+  files.forEach((file, fi) => {
+    const { students, title, isGroup } = getStudentsFromFile(file);
+    students.forEach((studentName, si) => {
+      tasks.push({ file, studentName, title, isGroup, cid: `rc-${fi}-${si}` });
+    });
   });
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const name = file.name.replace(/\.[^.]+$/, '');
-    const cid  = `rc-${i}`;
+  // Placeholder cards (모두)
+  tasks.forEach(t => {
+    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.file, t.studentName, t.isGroup));
+  });
+
+  // 파일별로 처리 (같은 파일은 한 번만 파싱)
+  let prevFile = null, parsedContent = '';
+  for (const task of tasks) {
+    const { file, studentName, title, isGroup, cid } = task;
 
     setStatus(cid, 'running', '파일 읽는 중...');
     setProg(cid, 10);
 
     try {
-      const content = await parseFile(file);
+      // 같은 파일이면 재파싱 생략
+      if (file !== prevFile) {
+        parsedContent = await parseFile(file);
+        prevFile = file;
+      }
       setProg(cid, 35);
       setStatus(cid, 'running', 'AI 분석 중...');
 
-      // Setup streaming area
       document.getElementById(`${cid}-body`).innerHTML = `
         <div class="prog-bar"><div class="prog-fill" id="${cid}-prog" style="width:35%"></div></div>
         <div id="${cid}-stream"></div>`;
@@ -882,7 +927,8 @@ async function startAnalysis() {
 
       const { system, prompt } = buildPrompts({
         subject, actType, topic, rubric, extra,
-        studentName: name, content, lengthOpt
+        studentName, content: parsedContent, lengthOpt,
+        isGroup, groupTitle: isGroup ? title : ''
       });
 
       await new Promise(resolve => {
@@ -894,27 +940,26 @@ async function startAnalysis() {
           },
           onDone() {
             streamEl.innerHTML = renderObs(fullText, false);
-            results[name] = fullText;
+            results[studentName] = fullText;
             setStatus(cid, 'done', '생성 완료');
             setProg(cid, 100);
             document.getElementById(`${cid}-prog`)?.closest('.prog-bar')?.remove();
 
-            // Copy-ready box + plain text preview
-            const escapedName = name.replace(/'/g, "\\'");
+            const en = studentName.replace(/'/g, "\\'");
             document.getElementById(`${cid}-body`).insertAdjacentHTML('beforeend', `
               <div class="copy-preview-label" style="margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0;">
-                📋 수업 관찰 내용란에 붙여넣을 텍스트 미리보기
+                📋 수업 관찰 내용란에 붙여넣을 텍스트
               </div>
               <div class="copy-preview" id="${cid}-preview">${esc(fullText)}</div>
               <div class="act-row">
-                <button class="btn btn-copy btn-sm" onclick="copyOne('${escapedName}')">
+                <button class="btn btn-copy btn-sm" onclick="copyOne('${en}')">
                   📋 복사 (생기부 도우미에 붙여넣기)
                 </button>
                 <button class="btn btn-open btn-sm"
                   onclick="window.open('https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html','_blank')">
                   🔗 생기부 도우미 열기
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="downloadOne('${escapedName}')">
+                <button class="btn btn-ghost btn-sm" onclick="downloadOne('${en}')">
                   💾 파일 저장
                 </button>
               </div>`);
@@ -964,13 +1009,13 @@ function renderObs(text, streaming) {
 }
 
 /* ── Placeholder card ── */
-function placeholderCard(i, file, name) {
-  const cid = `rc-${i}`;
+function placeholderCard(cid, file, name, isGroup) {
+  const groupTag = isGroup ? ' <span style="font-size:.68rem;opacity:.75;">(모둠)</span>' : '';
   return `
   <div class="result-card" id="${cid}" style="margin-bottom:13px;">
     <div class="rc-head">
       <div>
-        <h3>${ficon(file.name)} ${esc(name)}</h3>
+        <h3>${ficon(file.name)} ${esc(name)}${groupTag}</h3>
         <div class="rc-sub" id="${cid}-sub">대기 중...</div>
       </div>
       <span class="badge b-wait" id="${cid}-badge">대기</span>
