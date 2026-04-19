@@ -524,13 +524,15 @@
       </div>
 
       <div style="margin-top:10px;">
-        <label class="fl">성취 수준 <span style="font-weight:400;color:#94a3b8;">(선택 — 다시 클릭하면 해제)</span></label>
+        <label class="fl">수행평가 등급 <span style="font-weight:400;color:#94a3b8;">(선택 — 다시 클릭하면 해제)</span></label>
         <div class="act-cb-group" id="achieveLevelGroup">
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="상">상</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="중">중</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="하">하</label>
+          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="A">A</label>
+          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="B">B</label>
+          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="C">C</label>
+          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="D">D</label>
+          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="E">E</label>
         </div>
-        <p class="hint">성취 수준에 따라 핵심 내용 요약의 표현 방식이 달라집니다.</p>
+        <p class="hint">해당 학생의 수행평가 결과물 등급입니다. 등급에 따라 요약 표현 방식이 달라집니다.</p>
       </div>
     </div>
 
@@ -1434,7 +1436,13 @@ ${contentSection}
 
 function buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, lengthOpt, isGroup, groupTitle }) {
   const charLimit = parseInt(lengthOpt) || 200;
-  const levelGuide = { '상': '심층적 분석과 독창적 관점이 드러나도록 표현', '중': '핵심 내용을 균형 있게 반영', '하': '결과물에서 다룬 기본 내용을 사실대로 반영하고 미흡한 부분도 포함' }[achieveLevel] || '';
+  const levelGuide = {
+    'A': '최상위 수준 — 심층적 분석, 독창적 관점, 탁월한 완성도가 드러나도록 표현',
+    'B': '상위 수준 — 핵심 내용을 충실히 반영하고 논리적 구성이 잘 드러나도록 표현',
+    'C': '중간 수준 — 핵심 내용을 균형 있게 반영',
+    'D': '하위 수준 — 결과물에서 다룬 기본 내용을 사실대로 반영',
+    'E': '최하위 수준 — 결과물에서 다룬 내용을 사실대로 반영하고 미흡한 부분도 포함',
+  }[achieveLevel] || '';
 
   const system = `당신은 수행평가 결과물 핵심 내용 요약 전문 AI입니다.
 추출된 핵심 정보를 바탕으로 수행평가 결과물의 내용을 간결하고 정확하게 요약합니다.
@@ -1795,7 +1803,8 @@ async function loadAndRenderHistory() {
     }
     el.innerHTML = entries.slice(0, 50).map(e => {
       const dt = new Date(e.id).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const levelTag = e.achieveLevel ? `<span style="background:#dbeafe;color:#1e40af;border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;">${e.achieveLevel}</span>` : '';
+      const levelColors = {A:'#dcfce7;color:#15803d', B:'#dbeafe;color:#1d4ed8', C:'#fef9c3;color:#854d0e', D:'#fed7aa;color:#c2410c', E:'#fee2e2;color:#b91c1c'};
+      const levelTag = e.achieveLevel ? `<span style="background:${(levelColors[e.achieveLevel]||'#f1f5f9;color:#475569').split(';')[0]};${(levelColors[e.achieveLevel]||'#f1f5f9;color:#475569').split(';')[1]};border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;">등급 ${e.achieveLevel}</span>` : '';
       const versionsHtml = Array.isArray(e.versions) ? e.versions.map((v, i) => {
         const copyText = v.split('\n').map(l=>l.trim()).filter(l=>l).join(' ');
         return `<div style="margin-top:6px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;">
