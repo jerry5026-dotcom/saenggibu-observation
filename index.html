@@ -1077,35 +1077,39 @@ async function parseDOCX(file) {
   }
 }
 async function parsePPTX(file) {
-  const zip = await JSZip.loadAsync(file);
-  const slideKeys = Object.keys(zip.files)
-    .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
-    .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
-  const noteKeys = Object.keys(zip.files)
-    .filter(n => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(n))
-    .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const slideKeys = Object.keys(zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+    const noteKeys = Object.keys(zip.files)
+      .filter(n => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(n))
+      .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
 
-  let out = '';
-  for (let i = 0; i < slideKeys.length; i++) {
-    const xml = await zip.files[slideKeys[i]].async('string');
-    const texts = [...xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)]
-      .map(m => m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim())
-      .filter(t => t.length > 0);
-
-    let noteText = '';
-    if (noteKeys[i] && zip.files[noteKeys[i]]) {
-      const noteXml = await zip.files[noteKeys[i]].async('string');
-      const noteTexts = [...noteXml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)]
+    let out = '';
+    for (let i = 0; i < slideKeys.length; i++) {
+      const xml = await zip.files[slideKeys[i]].async('string');
+      const texts = [...xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)]
         .map(m => m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim())
-        .filter(t => t.length > 1 && !/^\d+$/.test(t));
-      if (noteTexts.length) noteText = ` [슬라이드노트: ${noteTexts.join(' ')}]`;
-    }
+        .filter(t => t.length > 0);
 
-    if (texts.length || noteText) {
-      out += `[슬라이드 ${i + 1}] ${texts.join(' ')}${noteText}\n`;
+      let noteText = '';
+      if (noteKeys[i] && zip.files[noteKeys[i]]) {
+        const noteXml = await zip.files[noteKeys[i]].async('string');
+        const noteTexts = [...noteXml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)]
+          .map(m => m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim())
+          .filter(t => t.length > 1 && !/^\d+$/.test(t));
+        if (noteTexts.length) noteText = ` [슬라이드노트: ${noteTexts.join(' ')}]`;
+      }
+
+      if (texts.length || noteText) {
+        out += `[슬라이드 ${i + 1}] ${texts.join(' ')}${noteText}\n`;
+      }
     }
+    return out || '(텍스트 추출 실패)';
+  } catch (err) {
+    throw new Error('PPTX 읽기 실패: ' + err.message);
   }
-  return out || '(텍스트 추출 실패)';
 }
 /* 이미지 스캔 PDF: 각 페이지를 canvas로 렌더링하여 base64 반환 */
 async function parsePDFImages(file) {
@@ -1136,13 +1140,15 @@ async function parsePDFImages(file) {
   }
 }
 
-/* 단순 이미지 파일(JPG·PNG·WEBP) → base64 */
+/* 단순 이미지 파일(JPG·PNG·WEBP) → base64 (FileReader 사용 — 대용량도 빠름) */
 async function parseImageFile(file) {
-  const buf = await file.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return [{base64: btoa(binary), mimeType: file.type || 'image/jpeg'}];
+  const b64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = e => resolve(e.target.result.split(',')[1]);
+    reader.onerror = () => reject(new Error('이미지 읽기 실패'));
+    reader.readAsDataURL(file);
+  });
+  return [{base64: b64, mimeType: file.type || 'image/jpeg'}];
 }
 
 async function parseFile(file) {
@@ -1198,7 +1204,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
           if (onRetry) onRetry(s);
           await new Promise(r => setTimeout(r, 1000));
         }
-        return callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens});
+        return callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
       }
       throw new Error(msg);
     }
@@ -1226,18 +1232,6 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
   } catch (err) {
     onError(err.message || String(err));
   }
-}
-
-function callClaudeOnce(params) {
-  return new Promise((resolve, reject) => {
-    let full = '';
-    callClaude({
-      ...params,
-      onChunk: c => { full += c; },
-      onDone: () => resolve(full),
-      onError: msg => reject(new Error(msg))
-    });
-  });
 }
 
 /* ── Gemini API ── */
@@ -1746,8 +1740,6 @@ function copyVersion(name, idx) {
     .catch(() => toast('복사 실패 — 브라우저 권한을 확인해주세요', 'error'));
 }
 
-function copyOne(name) { copyVersion(name, 0); }
-
 function downloadOne(name) {
   const v = results[name];
   const versions = Array.isArray(v) ? v : [v];
@@ -1803,8 +1795,15 @@ async function loadAndRenderHistory() {
     }
     el.innerHTML = entries.slice(0, 50).map(e => {
       const dt = new Date(e.id).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const levelColors = {A:'#dcfce7;color:#15803d', B:'#dbeafe;color:#1d4ed8', C:'#fef9c3;color:#854d0e', D:'#fed7aa;color:#c2410c', E:'#fee2e2;color:#b91c1c'};
-      const levelTag = e.achieveLevel ? `<span style="background:${(levelColors[e.achieveLevel]||'#f1f5f9;color:#475569').split(';')[0]};${(levelColors[e.achieveLevel]||'#f1f5f9;color:#475569').split(';')[1]};border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;">등급 ${e.achieveLevel}</span>` : '';
+      const levelColors = {
+        A: {bg:'#dcfce7', color:'#15803d'},
+        B: {bg:'#dbeafe', color:'#1d4ed8'},
+        C: {bg:'#fef9c3', color:'#854d0e'},
+        D: {bg:'#fed7aa', color:'#c2410c'},
+        E: {bg:'#fee2e2', color:'#b91c1c'},
+      };
+      const lc = levelColors[e.achieveLevel] || {bg:'#f1f5f9', color:'#475569'};
+      const levelTag = e.achieveLevel ? `<span style="background:${lc.bg};color:${lc.color};border-radius:99px;padding:1px 7px;font-size:.7rem;font-weight:700;">등급 ${e.achieveLevel}</span>` : '';
       const versionsHtml = Array.isArray(e.versions) ? e.versions.map((v, i) => {
         const copyText = v.split('\n').map(l=>l.trim()).filter(l=>l).join(' ');
         return `<div style="margin-top:6px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;">
