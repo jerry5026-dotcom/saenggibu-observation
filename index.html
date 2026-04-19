@@ -456,12 +456,23 @@
     <!-- API / 모델 설정 -->
     <div class="card">
       <div class="card-title">⚙️ API 설정</div>
-      <label class="fl">Anthropic API 키</label>
+
+      <label class="fl">AI 제공자</label>
+      <div class="act-cb-group" id="providerGroup" style="margin-bottom:11px;">
+        <label class="act-cb checked" onclick="switchProvider('anthropic')">
+          <input type="radio" name="provider" value="anthropic" checked>🧠 Claude
+        </label>
+        <label class="act-cb" onclick="switchProvider('gemini')">
+          <input type="radio" name="provider" value="gemini">✨ Gemini
+        </label>
+      </div>
+
+      <label class="fl" id="apiKeyLabel">Anthropic API 키</label>
       <div class="row2">
         <input type="password" id="apiKey" placeholder="sk-ant-api..." autocomplete="off" />
         <button class="btn btn-ghost btn-sm" onclick="saveSettings()">저장</button>
       </div>
-      <p class="hint">API 키는 브라우저 localStorage에만 저장됩니다.</p>
+      <p class="hint" id="apiKeyHint">API 키는 브라우저 localStorage에만 저장됩니다.</p>
 
       <div style="margin-top:11px;">
         <label class="fl">사용 모델</label>
@@ -565,9 +576,9 @@
            onclick="document.getElementById('fileInput').click()">
         <div class="dz-icon">📂</div>
         <p><strong>클릭하거나 파일을 드래그</strong>하여 업로드</p>
-        <p style="margin-top:3px; font-size:.75rem;">PDF · DOCX · PPTX &nbsp;|&nbsp; 여러 파일 동시 업로드 가능</p>
+        <p style="margin-top:3px; font-size:.75rem;">PDF · DOCX · PPTX · JPG · PNG &nbsp;|&nbsp; 여러 파일 동시 업로드 가능</p>
       </div>
-      <input type="file" id="fileInput" multiple accept=".pdf,.docx,.pptx"
+      <input type="file" id="fileInput" multiple accept=".pdf,.docx,.pptx,.jpg,.jpeg,.png,.webp"
              style="display:none"
              onchange="handleFiles(this.files); this.value='';" />
       <div class="file-list" id="fileList"></div>
@@ -631,6 +642,44 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 let files   = [];
 let results = {};  // key -> string[]  (버전 배열)
+
+/* ── API 제공자 ── */
+const PROVIDER_MODELS = {
+  anthropic: [
+    { value: 'claude-sonnet-4-6',         label: 'claude-sonnet-4-6 (권장)' },
+    { value: 'claude-opus-4-7',           label: 'claude-opus-4-7 (고품질 · 느림)' },
+    { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5 (빠름)' },
+  ],
+  gemini: [
+    { value: 'gemini-2.5-flash',          label: 'gemini-2.5-flash (권장)' },
+    { value: 'gemini-2.0-flash',          label: 'gemini-2.0-flash (빠름)' },
+    { value: 'gemini-2.5-pro',            label: 'gemini-2.5-pro (고품질)' },
+  ]
+};
+function getProvider() { return localStorage.getItem('app_provider') || 'anthropic'; }
+function switchProvider(provider) {
+  localStorage.setItem('app_provider', provider);
+  // 라디오 UI 업데이트
+  document.querySelectorAll('#providerGroup .act-cb').forEach(l => {
+    const inp = l.querySelector('input');
+    const active = inp.value === provider;
+    l.classList.toggle('checked', active);
+    inp.checked = active;
+  });
+  // 레이블 · 플레이스홀더 · 키 값 업데이트
+  const isAnthro = provider === 'anthropic';
+  document.getElementById('apiKeyLabel').textContent = isAnthro ? 'Anthropic API 키' : 'Google AI API 키';
+  document.getElementById('apiKey').placeholder       = isAnthro ? 'sk-ant-api...'   : 'AIzaSy...';
+  document.getElementById('apiKey').value             = localStorage.getItem(isAnthro ? 'anthro_key' : 'gemini_key') || '';
+  // 모델 목록 업데이트
+  const savedModel = localStorage.getItem(isAnthro ? 'anthro_model' : 'gemini_model') || '';
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = PROVIDER_MODELS[provider]
+    .map(m => `<option value="${m.value}"${m.value === savedModel ? ' selected' : ''}>${m.label}</option>`)
+    .join('');
+  if (!sel.value) sel.selectedIndex = 0;
+  syncBtn();
+}
 
 /* ── IndexedDB (학생 파일 영속 저장) ── */
 const _DB_NAME = 'saenggibu_db', _DB_VER = 2, _STORE = 'student_files';
@@ -796,11 +845,8 @@ function _restoreFields() {
 
 /* ── Init ── */
 (async function () {
-  // API 키 · 모델
-  const k = localStorage.getItem('anthro_key');
-  const m = localStorage.getItem('anthro_model');
-  if (k) document.getElementById('apiKey').value = k;
-  if (m) document.getElementById('modelSelect').value = m;
+  // 제공자 · API 키 · 모델 복원
+  switchProvider(localStorage.getItem('app_provider') || 'anthropic');
 
   // 텍스트 필드 복원
   _restoreFields();
@@ -837,7 +883,9 @@ function _restoreFields() {
 })();
 
 function syncBtn() {
-  const ok = document.getElementById('apiKey').value.trim().startsWith('sk-')
+  const key = document.getElementById('apiKey').value.trim();
+  const keyOk = getProvider() === 'anthropic' ? key.startsWith('sk-') : key.length > 0;
+  const ok = keyOk
           && document.getElementById('subject').value.trim().length > 0
           && files.length > 0;
   document.getElementById('analyzeBtn').disabled = !ok;
@@ -848,8 +896,9 @@ function saveSettings() {
   const k = document.getElementById('apiKey').value.trim();
   const m = document.getElementById('modelSelect').value;
   if (!k) { toast('API 키를 입력해주세요', 'error'); return; }
-  localStorage.setItem('anthro_key', k);
-  localStorage.setItem('anthro_model', m);
+  const prov = getProvider();
+  localStorage.setItem(prov === 'anthropic' ? 'anthro_key'   : 'gemini_key',   k);
+  localStorage.setItem(prov === 'anthropic' ? 'anthro_model' : 'gemini_model', m);
   toast('저장되었습니다', 'success');
   syncBtn();
 }
@@ -858,7 +907,8 @@ function saveSettings() {
 function xext(name) { return name.split('.').pop().toLowerCase(); }
 function ficon(name) {
   const e = xext(name);
-  return e==='pdf'?'📕': e==='docx'?'📘': e==='pptx'?'📙':'📄';
+  return e==='pdf'?'📕': e==='docx'?'📘': e==='pptx'?'📙':
+         ['jpg','jpeg','png','webp'].includes(e)?'🖼️':'📄';
 }
 function fsize(b) {
   return b<1024? b+'B': b<1048576? (b/1024).toFixed(1)+'KB': (b/1048576).toFixed(1)+'MB';
@@ -915,8 +965,8 @@ function getStudentsFromFile(file) {
 function handleFiles(list) {
   for (const f of list) {
     const e = xext(f.name);
-    if (!['pdf','docx','pptx'].includes(e)) {
-      toast(`${f.name}: PDF·DOCX·PPTX만 지원합니다`, 'error'); continue;
+    if (!['pdf','docx','pptx','jpg','jpeg','png','webp'].includes(e)) {
+      toast(`${f.name}: PDF·DOCX·PPTX·JPG·PNG만 지원합니다`, 'error'); continue;
     }
     if (!files.find(x => x.name === f.name)) {
       files.push(f);
@@ -1013,17 +1063,75 @@ async function parsePPTX(file) {
   }
   return out || '(텍스트 추출 실패)';
 }
+/* 이미지 스캔 PDF: 각 페이지를 canvas로 렌더링하여 base64 반환 */
+async function parsePDFImages(file) {
+  try {
+    const buf = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buf),
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+    const pdf = await loadingTask.promise;
+    const images = [];
+    const maxPages = Math.min(pdf.numPages, 10); // 최대 10페이지
+    for (let p = 1; p <= maxPages; p++) {
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({scale: 1.5});
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+      const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+      images.push({base64: b64, mimeType: 'image/jpeg'});
+    }
+    return images;
+  } catch (err) {
+    throw new Error('PDF 이미지 렌더링 실패: ' + err.message);
+  }
+}
+
+/* 단순 이미지 파일(JPG·PNG·WEBP) → base64 */
+async function parseImageFile(file) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return [{base64: btoa(binary), mimeType: file.type || 'image/jpeg'}];
+}
+
 async function parseFile(file) {
   const e = xext(file.name);
-  if (e==='pdf')  return parsePDF(file);
-  if (e==='docx') return parseDOCX(file);
-  if (e==='pptx') return parsePPTX(file);
+  if (e === 'pdf') {
+    const text = await parsePDF(file);
+    if (text.includes('텍스트를 추출할 수 없습니다')) {
+      // 이미지 스캔 PDF → 페이지를 이미지로 렌더링
+      const imageData = await parsePDFImages(file);
+      return { text: '[이미지 스캔 PDF — AI가 이미지를 직접 분석합니다]', imageData };
+    }
+    return { text, imageData: null };
+  }
+  if (e === 'docx') return { text: await parseDOCX(file), imageData: null };
+  if (e === 'pptx') return { text: await parsePPTX(file), imageData: null };
+  if (['jpg','jpeg','png','webp'].includes(e)) {
+    return { text: '[이미지 파일 — AI가 이미지를 직접 분석합니다]', imageData: await parseImageFile(file) };
+  }
   throw new Error('지원하지 않는 형식');
 }
 
 /* ── Claude API ── */
-async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500}) {
+async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
   try {
+    // 메시지 콘텐츠 구성 (이미지 있으면 멀티모달)
+    const msgContent = [];
+    if (imageData) {
+      (Array.isArray(imageData) ? imageData : [imageData]).forEach(img =>
+        msgContent.push({type:'image', source:{type:'base64', media_type: img.mimeType, data: img.base64}})
+      );
+    }
+    msgContent.push({type:'text', text: prompt});
+
     const resp = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
@@ -1035,7 +1143,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
         max_tokens: maxTokens,
         stream: true,
         system: [{ type:'text', text: system, cache_control:{type:'ephemeral'} }],
-        messages: [{ role:'user', content: prompt }]
+        messages: [{ role:'user', content: msgContent }]
       })
     });
     if (!resp.ok) {
@@ -1088,8 +1196,86 @@ function callClaudeOnce(params) {
   });
 }
 
+/* ── Gemini API ── */
+async function callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
+  try {
+    const parts = [];
+    if (imageData) {
+      (Array.isArray(imageData) ? imageData : [imageData]).forEach(img =>
+        parts.push({inline_data: {mime_type: img.mimeType, data: img.base64}})
+      );
+    }
+    parts.push({text: prompt});
+
+    const body = {
+      system_instruction: {parts: [{text: system}]},
+      contents: [{role:'user', parts}],
+      generationConfig: {maxOutputTokens: maxTokens}
+    };
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      let msg = `HTTP ${resp.status}`;
+      try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+      if (resp.status === 429 && _retries > 0) {
+        for (let s = 62; s > 0; s--) {
+          if (onRetry) onRetry(s);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        return callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
+      }
+      throw new Error(msg);
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        try {
+          const p = JSON.parse(raw);
+          const text = p?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) onChunk(text);
+        } catch {}
+      }
+    }
+    onDone();
+  } catch (err) {
+    onError(err.message || String(err));
+  }
+}
+
+/* ── 통합 AI 호출 (제공자 자동 선택) ── */
+async function callAI(params) {
+  return getProvider() === 'gemini' ? callGemini(params) : callClaude(params);
+}
+function callAIOnce(params) {
+  return new Promise((resolve, reject) => {
+    let full = '';
+    callAI({
+      ...params,
+      onChunk: c => { full += c; },
+      onDone:  () => resolve(full),
+      onError: msg => reject(new Error(msg))
+    });
+  });
+}
+
 /* ── Build prompts (2단계) ── */
-function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content, isGroup, groupTitle }) {
+function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content, isGroup, groupTitle, hasImages }) {
   const system = `당신은 학생 수행평가 결과물의 핵심 내용을 구조적으로 추출하는 분석 AI입니다.
 교사가 수행평가 결과물의 내용을 정확히 파악할 수 있도록 빠짐없이 정리합니다.
 학생 이름은 출력에 포함하지 않습니다.`;
@@ -1100,12 +1286,14 @@ function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel
   const levelSection  = achieveLevel ? `성취 수준: ${achieveLevel}\n` : '';
   const extraSection  = extra   ? `\n## 수업 특이사항\n${extra}\n` : '';
 
+  const contentSection = hasImages
+    ? `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''} (이미지 첨부)\n첨부된 이미지가 수행평가 결과물입니다. 이미지 안의 모든 텍스트와 내용을 꼼꼼히 분석하세요.`
+    : `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}\n\n${content}`;
+
   const prompt = `## 수행평가 정보
 과목: ${subject}
 ${actSection}${topicSection}${levelSection}${rubricSection}${extraSection}
-## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}
-
-${content}
+${contentSection}
 
 ---
 
@@ -1190,12 +1378,14 @@ async function startAnalysis() {
   const lengthOpt= document.getElementById('lengthOption').value;
   const achieveLevel = getAchieveLevel();
 
-  if (!apiKey.startsWith('sk-')) { toast('유효한 API 키를 입력해주세요', 'error'); return; }
-  if (!subject)                   { toast('과목명을 입력해주세요', 'error'); return; }
-  if (!files.length)              { toast('학생 파일을 업로드해주세요', 'error'); return; }
+  const provider = getProvider();
+  const keyOk = provider === 'anthropic' ? apiKey.startsWith('sk-') : apiKey.length > 0;
+  if (!keyOk)        { toast('유효한 API 키를 입력해주세요', 'error'); return; }
+  if (!subject)      { toast('과목명을 입력해주세요', 'error'); return; }
+  if (!files.length) { toast('학생 파일을 업로드해주세요', 'error'); return; }
 
-  localStorage.setItem('anthro_key', apiKey);
-  localStorage.setItem('anthro_model', model);
+  localStorage.setItem(provider === 'anthropic' ? 'anthro_key'   : 'gemini_key',   apiKey);
+  localStorage.setItem(provider === 'anthropic' ? 'anthro_model' : 'gemini_model', model);
 
   results = {};
   const btn = document.getElementById('analyzeBtn');
@@ -1221,7 +1411,7 @@ async function startAnalysis() {
   });
 
   // 파일별로 처리 (같은 파일은 한 번만 파싱)
-  let prevFile = null, parsedContent = '';
+  let prevFile = null, parsedResult = {text: '', imageData: null};
   for (const task of tasks) {
     const { file, studentName, displayName, title, isGroup, cid } = task;
 
@@ -1231,19 +1421,22 @@ async function startAnalysis() {
     try {
       // 같은 파일이면 재파싱 생략
       if (file !== prevFile) {
-        parsedContent = await parseFile(file);
+        parsedResult = await parseFile(file);
         prevFile = file;
       }
+      const parsedContent = parsedResult.text;
+      const imageData     = parsedResult.imageData;
+      const hasImages     = Array.isArray(imageData) && imageData.length > 0;
 
       // Step 1: 핵심 내용 추출
-      setStatus(cid, 'running', '1단계: 핵심 내용 추출 중...');
+      setStatus(cid, 'running', hasImages ? '1단계: 이미지 분석 중...' : '1단계: 핵심 내용 추출 중...');
       setProg(cid, 20);
 
-      const step1 = buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content: parsedContent, isGroup, groupTitle: isGroup ? title : '' });
+      const step1 = buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content: parsedContent, isGroup, groupTitle: isGroup ? title : '', hasImages });
       let extractedContent;
       try {
-        extractedContent = await callClaudeOnce({
-          ...step1, apiKey, model, maxTokens: 1500,
+        extractedContent = await callAIOnce({
+          ...step1, apiKey, model, maxTokens: 1500, imageData,
           onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`)
         });
       } catch (err) {
@@ -1262,7 +1455,7 @@ async function startAnalysis() {
       const step2 = buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, lengthOpt, isGroup, groupTitle: isGroup ? title : '' });
 
       await new Promise(resolve => {
-        callClaude({
+        callAI({
           ...step2, apiKey, model, maxTokens: 2500,
           onChunk(chunk) {
             fullText += chunk;
