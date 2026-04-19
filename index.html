@@ -462,6 +462,9 @@
         <label class="act-cb checked" onclick="switchProvider('anthropic')">
           <input type="radio" name="provider" value="anthropic" checked>🧠 Claude
         </label>
+        <label class="act-cb" onclick="switchProvider('openai')">
+          <input type="radio" name="provider" value="openai">💬 ChatGPT
+        </label>
         <label class="act-cb" onclick="switchProvider('gemini')">
           <input type="radio" name="provider" value="gemini">✨ Gemini
         </label>
@@ -588,7 +591,7 @@
     <div class="card" id="guideCard">
       <div class="card-title">💡 사용 방법</div>
       <ol style="padding-left:18px; font-size:.84rem; line-height:2.1; color:#475569;">
-        <li>API 키와 <strong>과목명</strong>을 입력하세요</li>
+        <li>AI 제공자(Claude·ChatGPT·Gemini)를 선택하고 <strong>API 키</strong>와 <strong>과목명</strong>을 입력하세요</li>
         <li>채점 기준(루브릭)을 입력하거나 파일로 불러오세요<br>
             <span style="font-size:.76rem; color:#94a3b8;">없어도 되지만, 있을수록 정확도 향상</span></li>
         <li>학생 수행평가 파일(PDF·DOCX·PPTX)을 업로드하세요<br>
@@ -644,19 +647,61 @@ let files   = [];
 let results = {};  // key -> string[]  (버전 배열)
 
 /* ── API 제공자 ── */
+// 모델 목록 (공식 문서 기준 최신 버전, 2026년 4월 기준)
 const PROVIDER_MODELS = {
   anthropic: [
-    { value: 'claude-sonnet-4-6',         label: 'claude-sonnet-4-6 (권장)' },
-    { value: 'claude-opus-4-7',           label: 'claude-opus-4-7 (고품질 · 느림)' },
-    { value: 'claude-haiku-4-5-20251001', label: 'claude-haiku-4-5 (빠름)' },
+    // 모두 유료 (console.anthropic.com)
+    { value: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6 — 균형 · 권장 · 유료' },
+    { value: 'claude-opus-4-7',           label: 'Claude Opus 4.7 — 최신 최고품질 · 유료' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 — 빠름 · 유료' },
+  ],
+  openai: [
+    // 모두 유료 (platform.openai.com)
+    { value: 'gpt-5.4-mini',  label: 'GPT-5.4 mini — 최신 균형 · 권장 · 유료' },
+    { value: 'gpt-5.4',       label: 'GPT-5.4 — 최신 최고품질 · 유료' },
+    { value: 'gpt-4.1',       label: 'GPT-4.1 — 안정 고품질 · 유료' },
+    { value: 'gpt-4.1-mini',  label: 'GPT-4.1 mini — 안정 균형 · 유료' },
+    { value: 'gpt-4o-mini',   label: 'GPT-4o mini — 빠름 저렴 · 유료' },
   ],
   gemini: [
-    { value: 'gemini-2.5-flash',          label: 'gemini-2.5-flash (권장)' },
-    { value: 'gemini-2.0-flash',          label: 'gemini-2.0-flash (빠름)' },
-    { value: 'gemini-2.5-pro',            label: 'gemini-2.5-pro (고품질)' },
+    // 일부 무료티어 (aistudio.google.com)
+    { value: 'gemini-2.5-flash',         label: 'Gemini 2.5 Flash — 균형 · 권장 · 무료티어' },
+    { value: 'gemini-3-flash-preview',   label: 'Gemini 3 Flash — 최신 · 무료티어' },
+    { value: 'gemini-2.5-pro',           label: 'Gemini 2.5 Pro — 고품질 · 무료티어' },
+    { value: 'gemini-3.1-pro-preview',   label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료' },
+    { value: 'gemini-2.0-flash',         label: 'Gemini 2.0 Flash — 빠름 · 무료티어' },
   ]
 };
+
+const PROVIDER_META = {
+  anthropic: {
+    label: 'Anthropic API 키',
+    placeholder: 'sk-ant-api03-...',
+    storageKey: 'anthro_key',
+    modelKey: 'anthro_model',
+    hint: '전부 유료 | 키 발급: <a href="https://console.anthropic.com" target="_blank" style="color:#1e40af;">console.anthropic.com</a>',
+    keyValid: k => k.startsWith('sk-ant-'),
+  },
+  openai: {
+    label: 'OpenAI API 키',
+    placeholder: 'sk-proj-...',
+    storageKey: 'openai_key',
+    modelKey: 'openai_model',
+    hint: '전부 유료 | 키 발급: <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#1e40af;">platform.openai.com</a>',
+    keyValid: k => k.startsWith('sk-'),
+  },
+  gemini: {
+    label: 'Google AI API 키',
+    placeholder: 'AIzaSy...',
+    storageKey: 'gemini_key',
+    modelKey: 'gemini_model',
+    hint: '일부 무료티어 | 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af;">aistudio.google.com</a>',
+    keyValid: k => k.length > 10,
+  },
+};
+
 function getProvider() { return localStorage.getItem('app_provider') || 'anthropic'; }
+
 function switchProvider(provider) {
   localStorage.setItem('app_provider', provider);
   // 라디오 UI 업데이트
@@ -666,13 +711,14 @@ function switchProvider(provider) {
     l.classList.toggle('checked', active);
     inp.checked = active;
   });
-  // 레이블 · 플레이스홀더 · 키 값 업데이트
-  const isAnthro = provider === 'anthropic';
-  document.getElementById('apiKeyLabel').textContent = isAnthro ? 'Anthropic API 키' : 'Google AI API 키';
-  document.getElementById('apiKey').placeholder       = isAnthro ? 'sk-ant-api...'   : 'AIzaSy...';
-  document.getElementById('apiKey').value             = localStorage.getItem(isAnthro ? 'anthro_key' : 'gemini_key') || '';
+  // 메타 정보로 레이블·플레이스홀더·키·힌트 업데이트
+  const meta = PROVIDER_META[provider];
+  document.getElementById('apiKeyLabel').textContent = meta.label;
+  document.getElementById('apiKey').placeholder      = meta.placeholder;
+  document.getElementById('apiKey').value            = localStorage.getItem(meta.storageKey) || '';
+  document.getElementById('apiKeyHint').innerHTML    = 'API 키는 브라우저에만 저장됩니다 — ' + meta.hint;
   // 모델 목록 업데이트
-  const savedModel = localStorage.getItem(isAnthro ? 'anthro_model' : 'gemini_model') || '';
+  const savedModel = localStorage.getItem(meta.modelKey) || '';
   const sel = document.getElementById('modelSelect');
   sel.innerHTML = PROVIDER_MODELS[provider]
     .map(m => `<option value="${m.value}"${m.value === savedModel ? ' selected' : ''}>${m.label}</option>`)
@@ -884,7 +930,7 @@ function _restoreFields() {
 
 function syncBtn() {
   const key = document.getElementById('apiKey').value.trim();
-  const keyOk = getProvider() === 'anthropic' ? key.startsWith('sk-') : key.length > 0;
+  const keyOk = PROVIDER_META[getProvider()].keyValid(key);
   const ok = keyOk
           && document.getElementById('subject').value.trim().length > 0
           && files.length > 0;
@@ -896,9 +942,9 @@ function saveSettings() {
   const k = document.getElementById('apiKey').value.trim();
   const m = document.getElementById('modelSelect').value;
   if (!k) { toast('API 키를 입력해주세요', 'error'); return; }
-  const prov = getProvider();
-  localStorage.setItem(prov === 'anthropic' ? 'anthro_key'   : 'gemini_key',   k);
-  localStorage.setItem(prov === 'anthropic' ? 'anthro_model' : 'gemini_model', m);
+  const meta = PROVIDER_META[getProvider()];
+  localStorage.setItem(meta.storageKey, k);
+  localStorage.setItem(meta.modelKey,   m);
   toast('저장되었습니다', 'success');
   syncBtn();
 }
@@ -1258,9 +1304,86 @@ async function callGemini({apiKey, model, prompt, system, onChunk, onDone, onErr
   }
 }
 
+/* ── OpenAI API ── */
+async function callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
+  try {
+    // 사용자 메시지 콘텐츠 구성 (이미지 있으면 멀티모달)
+    const userContent = [];
+    if (imageData) {
+      (Array.isArray(imageData) ? imageData : [imageData]).forEach(img =>
+        userContent.push({
+          type: 'image_url',
+          image_url: {url: `data:${img.mimeType};base64,${img.base64}`, detail: 'auto'}
+        })
+      );
+    }
+    userContent.push({type: 'text', text: prompt});
+
+    const body = {
+      model,
+      stream: true,
+      max_tokens: maxTokens,
+      messages: [
+        {role: 'system', content: system},
+        {role: 'user', content: userContent.length === 1 ? userContent[0].text : userContent}
+      ]
+    };
+
+    const resp = await fetch('/api/proxy', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'x-provider': 'openai',
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      let msg = `HTTP ${resp.status}`;
+      try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+      if (resp.status === 429 && _retries > 0) {
+        for (let s = 62; s > 0; s--) {
+          if (onRetry) onRetry(s);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        return callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
+      }
+      throw new Error(msg);
+    }
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') continue;
+        try {
+          const p = JSON.parse(raw);
+          const text = p?.choices?.[0]?.delta?.content;
+          if (text) onChunk(text);
+        } catch {}
+      }
+    }
+    onDone();
+  } catch (err) {
+    onError(err.message || String(err));
+  }
+}
+
 /* ── 통합 AI 호출 (제공자 자동 선택) ── */
 async function callAI(params) {
-  return getProvider() === 'gemini' ? callGemini(params) : callClaude(params);
+  const p = getProvider();
+  if (p === 'gemini') return callGemini(params);
+  if (p === 'openai') return callOpenAI(params);
+  return callClaude(params);
 }
 function callAIOnce(params) {
   return new Promise((resolve, reject) => {
@@ -1379,13 +1502,13 @@ async function startAnalysis() {
   const achieveLevel = getAchieveLevel();
 
   const provider = getProvider();
-  const keyOk = provider === 'anthropic' ? apiKey.startsWith('sk-') : apiKey.length > 0;
-  if (!keyOk)        { toast('유효한 API 키를 입력해주세요', 'error'); return; }
-  if (!subject)      { toast('과목명을 입력해주세요', 'error'); return; }
-  if (!files.length) { toast('학생 파일을 업로드해주세요', 'error'); return; }
+  const meta = PROVIDER_META[provider];
+  if (!meta.keyValid(apiKey)) { toast('유효한 API 키를 입력해주세요', 'error'); return; }
+  if (!subject)               { toast('과목명을 입력해주세요', 'error'); return; }
+  if (!files.length)          { toast('학생 파일을 업로드해주세요', 'error'); return; }
 
-  localStorage.setItem(provider === 'anthropic' ? 'anthro_key'   : 'gemini_key',   apiKey);
-  localStorage.setItem(provider === 'anthropic' ? 'anthro_model' : 'gemini_model', model);
+  localStorage.setItem(meta.storageKey, apiKey);
+  localStorage.setItem(meta.modelKey,   model);
 
   results = {};
   const btn = document.getElementById('analyzeBtn');

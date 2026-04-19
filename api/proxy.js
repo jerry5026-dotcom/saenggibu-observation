@@ -1,4 +1,4 @@
-// Vercel Edge Function — Anthropic API 프록시 (CORS 해결)
+// Vercel Edge Function — AI API 프록시 (Anthropic · OpenAI CORS 해결)
 export const config = { runtime: 'edge' };
 
 export default async function handler(req) {
@@ -7,7 +7,7 @@ export default async function handler(req) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key, X-Provider',
   };
 
   // CORS 프리플라이트
@@ -19,7 +19,9 @@ export default async function handler(req) {
     return new Response('Method Not Allowed', { status: 405, headers: corsHeaders });
   }
 
-  const apiKey = req.headers.get('x-api-key');
+  const apiKey  = req.headers.get('x-api-key');
+  const provider = (req.headers.get('x-provider') || 'anthropic').toLowerCase();
+
   if (!apiKey) {
     return new Response(
       JSON.stringify({ error: { message: 'X-Api-Key 헤더가 필요합니다' } }),
@@ -29,14 +31,28 @@ export default async function handler(req) {
 
   const body = await req.text();
 
-  // Anthropic API 호출 (서버→서버, CORS 없음)
-  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
+  let upstreamUrl, upstreamHeaders;
+
+  if (provider === 'openai') {
+    // OpenAI Chat Completions API
+    upstreamUrl = 'https://api.openai.com/v1/chat/completions';
+    upstreamHeaders = {
+      'Authorization': `Bearer ${apiKey}`,
+      'content-type': 'application/json',
+    };
+  } else {
+    // Anthropic Messages API (기본값)
+    upstreamUrl = 'https://api.anthropic.com/v1/messages';
+    upstreamHeaders = {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
-    },
+    };
+  }
+
+  const upstream = await fetch(upstreamUrl, {
+    method: 'POST',
+    headers: upstreamHeaders,
     body,
   });
 
