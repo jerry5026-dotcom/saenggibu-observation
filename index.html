@@ -308,7 +308,7 @@
       font-size: .855rem;
       line-height: 1.9;
       color: #1e293b;
-      white-space: pre-wrap;
+      white-space: normal;
       word-break: break-word;
       margin-top: 12px;
     }
@@ -482,14 +482,14 @@
       <div style="margin-top:10px;">
         <label class="fl">수행평가 활동 유형 <span style="font-weight:400;color:#94a3b8;">(중복 선택 가능)</span></label>
         <div class="act-cb-group" id="activityTypeGroup">
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="보고서 작성">보고서 작성</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="발표 및 PPT 제작">발표 및 PPT 제작</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="실험·탐구 보고서">실험·탐구 보고서</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="논술형 글쓰기">논술형 글쓰기</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="프로젝트 활동">프로젝트 활동</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="독서 감상문">독서 감상문</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="토론·토의 활동">토론·토의 활동</label>
-          <label class="act-cb" onclick="toggleAct(this)"><input type="checkbox" value="포트폴리오">포트폴리오</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="보고서 작성">보고서 작성</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="발표 및 PPT 제작">발표 및 PPT 제작</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="실험·탐구 보고서">실험·탐구 보고서</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="논술형 글쓰기">논술형 글쓰기</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="프로젝트 활동">프로젝트 활동</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="독서 감상문">독서 감상문</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="토론·토의 활동">토론·토의 활동</label>
+          <label class="act-cb" onclick="toggleAct(event, this)"><input type="checkbox" value="포트폴리오">포트폴리오</label>
         </div>
       </div>
 
@@ -609,7 +609,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let files   = [];
-let results = {};  // name -> { raw, sections }
+let results = {};  // key -> string[]  (버전 배열)
 
 /* ── IndexedDB (학생 파일 영속 저장) ── */
 const _DB_NAME = 'saenggibu_db', _DB_VER = 1, _STORE = 'student_files';
@@ -652,17 +652,10 @@ async function _loadAllFiles() {
     req.onerror = e => rej(e.target.error);
   });
 }
-async function _clearAllFiles() {
-  const db = await _openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(_STORE, 'readwrite');
-    tx.objectStore(_STORE).clear();
-    tx.oncomplete = res; tx.onerror = e => rej(e.target.error);
-  });
-}
 
 /* ── 활동 유형 체크박스 ── */
-function toggleAct(label) {
+function toggleAct(event, label) {
+  event.preventDefault(); // 브라우저 기본 체크박스 토글 차단 (이중 토글 방지)
   const cb = label.querySelector('input[type="checkbox"]');
   cb.checked = !cb.checked;
   label.classList.toggle('checked', cb.checked);
@@ -893,9 +886,13 @@ async function parsePDF(file) {
   }
 }
 async function parseDOCX(file) {
-  const buf = await file.arrayBuffer();
-  const r = await mammoth.extractRawText({arrayBuffer:buf});
-  return r.value || '(텍스트 추출 실패)';
+  try {
+    const buf = await file.arrayBuffer();
+    const r = await mammoth.extractRawText({arrayBuffer: buf});
+    return r.value || '(텍스트를 추출할 수 없습니다)';
+  } catch (err) {
+    throw new Error('DOCX 읽기 실패: ' + err.message);
+  }
 }
 async function parsePPTX(file) {
   const zip = await JSZip.loadAsync(file);
@@ -1208,7 +1205,7 @@ function renderObs(text, streaming) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   if (!lines.length) {
-    return `<div class="obs-text streaming">${esc(text)}${streaming ? '<span class="cursor"></span>' : ''}</div>`;
+    return `<div style="font-size:.85rem;color:#64748b;padding:8px;">${esc(text)}${streaming ? '<span class="cursor"></span>' : ''}</div>`;
   }
 
   const sentenceHtml = lines.map((line, i) => {
