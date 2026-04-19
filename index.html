@@ -667,7 +667,7 @@ const PROVIDER_MODELS = {
     // 일부 무료 (aistudio.google.com)
     { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash — 균형 · 권장 · 무료' },
     { value: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro — 고품질 · 무료' },
-    { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료' },
+    { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview — 최신 실험 · 유료' },
   ]
 };
 
@@ -686,7 +686,7 @@ const PROVIDER_META = {
     storageKey: 'openai_key',
     modelKey: 'openai_model',
     hint: '전부 유료 | 키 발급: <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#1e40af;">platform.openai.com</a>',
-    keyValid: k => k.startsWith('sk-'),
+    keyValid: k => k.startsWith('sk-') && !k.startsWith('sk-ant-'),
   },
   gemini: {
     label: 'Google AI API 키',
@@ -1045,24 +1045,36 @@ function renderFileList() {
 }
 
 /* ── Parsers ── */
+async function _pdfTextFromBuf(buf) {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buf),
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  });
+  const pdf = await loadingTask.promise;
+  let out = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const pg = await pdf.getPage(p);
+    const tc = await pg.getTextContent();
+    const line = tc.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+    if (line) out += `[${p}페이지] ${line}\n`;
+  }
+  return out || '(텍스트를 추출할 수 없습니다 — 이미지 스캔 PDF이거나 보호된 파일일 수 있습니다)';
+}
+// 루브릭 파일 파싱용 (File 객체를 받음)
 async function parsePDF(file) {
   try {
     const buf = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(buf),
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-    const pdf = await loadingTask.promise;
-    let out = '';
-    for (let p = 1; p <= pdf.numPages; p++) {
-      const pg = await pdf.getPage(p);
-      const tc = await pg.getTextContent();
-      const line = tc.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
-      if (line) out += `[${p}페이지] ${line}\n`;
-    }
-    return out || '(텍스트를 추출할 수 없습니다 — 이미지 스캔 PDF이거나 보호된 파일일 수 있습니다)';
+    return await _pdfTextFromBuf(buf);
+  } catch (err) {
+    throw new Error('PDF 읽기 실패: ' + err.message);
+  }
+}
+// 학생 파일 파싱용 (buf 재사용, parseFile에서 호출)
+async function parsePDFFromBuf(buf) {
+  try {
+    return await _pdfTextFromBuf(buf);
   } catch (err) {
     throw new Error('PDF 읽기 실패: ' + err.message);
   }
@@ -1112,29 +1124,32 @@ async function parsePPTX(file) {
   }
 }
 /* 이미지 스캔 PDF: 각 페이지를 canvas로 렌더링하여 base64 반환 */
-async function parsePDFImages(file) {
+async function _pdfImagesToBuf(buf) {
+  const loadingTask = pdfjsLib.getDocument({
+    data: new Uint8Array(buf),
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  });
+  const pdf = await loadingTask.promise;
+  const images = [];
+  const maxPages = Math.min(pdf.numPages, 10); // 최대 10페이지
+  for (let p = 1; p <= maxPages; p++) {
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({scale: 1.5});
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+    const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+    images.push({base64: b64, mimeType: 'image/jpeg'});
+  }
+  return images;
+}
+// buf 재사용 버전 (parseFile에서 호출 — 이중 로드 방지)
+async function parsePDFImagesFromBuf(buf) {
   try {
-    const buf = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({
-      data: new Uint8Array(buf),
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-    const pdf = await loadingTask.promise;
-    const images = [];
-    const maxPages = Math.min(pdf.numPages, 10); // 최대 10페이지
-    for (let p = 1; p <= maxPages; p++) {
-      const page = await pdf.getPage(p);
-      const viewport = page.getViewport({scale: 1.5});
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-      const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
-      images.push({base64: b64, mimeType: 'image/jpeg'});
-    }
-    return images;
+    return await _pdfImagesToBuf(buf);
   } catch (err) {
     throw new Error('PDF 이미지 렌더링 실패: ' + err.message);
   }
@@ -1154,10 +1169,12 @@ async function parseImageFile(file) {
 async function parseFile(file) {
   const e = xext(file.name);
   if (e === 'pdf') {
-    const text = await parsePDF(file);
+    // arrayBuffer를 한 번만 읽어 텍스트 추출과 이미지 렌더링에 재사용
+    const buf = await file.arrayBuffer();
+    const text = await parsePDFFromBuf(buf);
     if (text.includes('텍스트를 추출할 수 없습니다')) {
-      // 이미지 스캔 PDF → 페이지를 이미지로 렌더링
-      const imageData = await parsePDFImages(file);
+      // 이미지 스캔 PDF → 페이지를 이미지로 렌더링 (같은 buf 재사용)
+      const imageData = await parsePDFImagesFromBuf(buf);
       return { text: '[이미지 스캔 PDF — AI가 이미지를 직접 분석합니다]', imageData };
     }
     return { text, imageData: null };
@@ -1187,6 +1204,7 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
       headers: {
         'content-type': 'application/json',
         'x-api-key': apiKey,
+        'x-provider': 'anthropic',
       },
       body: JSON.stringify({
         model,
@@ -1632,7 +1650,7 @@ function parseVersions(text) {
 
 /* ── 3버전 결과 카드 렌더링 ── */
 function renderVersionCards(versions, charLimit, studentName) {
-  const en = studentName.replace(/'/g, "\\'");
+  const en = studentName.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, "\\'");
   const cards = versions.map((v, i) => {
     const lines    = v.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const copyText = lines.join(' ');   // 줄바꿈 없이 이어붙이기
