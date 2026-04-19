@@ -657,19 +657,15 @@ const PROVIDER_MODELS = {
   ],
   openai: [
     // 모두 유료 (platform.openai.com)
-    { value: 'gpt-5.4-mini',  label: 'GPT-5.4 mini — 최신 균형 · 권장 · 유료' },
-    { value: 'gpt-5.4',       label: 'GPT-5.4 — 최신 최고품질 · 유료' },
-    { value: 'gpt-4.1',       label: 'GPT-4.1 — 안정 고품질 · 유료' },
-    { value: 'gpt-4.1-mini',  label: 'GPT-4.1 mini — 안정 균형 · 유료' },
-    { value: 'gpt-4o-mini',   label: 'GPT-4o mini — 빠름 저렴 · 유료' },
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4 mini — 최신 균형 · 권장 · 유료' },
+    { value: 'gpt-5.4',      label: 'GPT-5.4 — 최신 최고품질 · 유료' },
+    { value: 'gpt-4o-mini',  label: 'GPT-4o mini — 빠름 저렴 · 유료' },
   ],
   gemini: [
-    // 일부 무료티어 (aistudio.google.com)
-    { value: 'gemini-2.5-flash',         label: 'Gemini 2.5 Flash — 균형 · 권장 · 무료티어' },
-    { value: 'gemini-3-flash-preview',   label: 'Gemini 3 Flash — 최신 · 무료티어' },
-    { value: 'gemini-2.5-pro',           label: 'Gemini 2.5 Pro — 고품질 · 무료티어' },
-    { value: 'gemini-3.1-pro-preview',   label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료' },
-    { value: 'gemini-2.0-flash',         label: 'Gemini 2.0 Flash — 빠름 · 무료티어' },
+    // 일부 무료 (aistudio.google.com)
+    { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash — 균형 · 권장 · 무료' },
+    { value: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro — 고품질 · 무료' },
+    { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료' },
   ]
 };
 
@@ -695,7 +691,7 @@ const PROVIDER_META = {
     placeholder: 'AIzaSy...',
     storageKey: 'gemini_key',
     modelKey: 'gemini_model',
-    hint: '일부 무료티어 | 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af;">aistudio.google.com</a>',
+    hint: '일부 무료 | 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af;">aistudio.google.com</a>',
     keyValid: k => k.length > 10,
   },
 };
