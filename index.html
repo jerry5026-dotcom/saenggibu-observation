@@ -1169,12 +1169,13 @@ async function parseImageFile(file) {
 async function parseFile(file) {
   const e = xext(file.name);
   if (e === 'pdf') {
-    // arrayBuffer를 한 번만 읽어 텍스트 추출과 이미지 렌더링에 재사용
+    // PDF.js는 ArrayBuffer를 transfer(소유권 이전)하므로
+    // 텍스트 추출과 이미지 렌더링에 각각 독립적인 복사본(slice)을 넘겨야 함
     const buf = await file.arrayBuffer();
-    const text = await parsePDFFromBuf(buf);
+    const text = await parsePDFFromBuf(buf.slice(0));
     if (text.includes('텍스트를 추출할 수 없습니다')) {
-      // 이미지 스캔 PDF → 페이지를 이미지로 렌더링 (같은 buf 재사용)
-      const imageData = await parsePDFImagesFromBuf(buf);
+      // 이미지 스캔 PDF → 페이지를 이미지로 렌더링 (새 복사본 사용)
+      const imageData = await parsePDFImagesFromBuf(buf.slice(0));
       return { text: '[이미지 스캔 PDF — AI가 이미지를 직접 분석합니다]', imageData };
     }
     return { text, imageData: null };
