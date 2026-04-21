@@ -645,8 +645,25 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-let files   = [];
-let results = {};  // key -> string[]  (버전 배열)
+/* ── 전역 상수 ── */
+const CONFIG = {
+  RETRY_WAIT_SECONDS: 62,           // Rate limit 시 대기 초
+  MAX_RETRIES: 2,                   // 자동 재시도 횟수
+  PDF_MAX_PAGES: 10,                // 스캔 PDF 최대 렌더링 페이지 수
+  PDF_SCALE: 1.8,                   // PDF → 이미지 렌더링 배율 (손글씨 대응)
+  PDF_JPEG_QUALITY: 0.75,           // PDF 이미지 JPEG 품질
+  PDF_MAX_BODY_BYTES: 4_000_000,    // Vercel Edge Function 본문 크기 마진 (4MB)
+  TASK_DELAY_MS: 1500,              // 연속 파일 처리 간 간격
+  MAX_FILE_SIZE_BYTES: 30 * 1024 * 1024,  // 파일 1개 최대 크기 (30MB)
+  STEP1_MAX_TOKENS: 1500,
+  STEP2_MAX_TOKENS: 2500,
+  RUBRIC_OCR_MAX_TOKENS: 2000,
+};
+
+let files       = [];
+let results     = {};   // key -> string[]  (버전 배열)
+let _isAnalyzing = false;
+let _abortCtrl   = null;
 
 /* ── API 제공자 ── */
 // 모델 목록 (공식 문서 기준 최신 버전, 2026년 4월 기준)
@@ -694,7 +711,7 @@ const PROVIDER_META = {
     storageKey: 'gemini_key',
     modelKey: 'gemini_model',
     hint: '일부 무료 | 키 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af;">aistudio.google.com</a>',
-    keyValid: k => k.length > 10,
+    keyValid: k => /^AIzaSy[A-Za-z0-9_-]{33}$/.test(k),
   },
 };
 
@@ -924,6 +941,15 @@ function _restoreFields() {
       toast(`${saved.length}개 파일이 복원되었습니다`, 'info');
     }
   } catch (e) { /* 조용히 무시 */ }
+
+  // 분석 중 페이지 이탈 방지
+  window.addEventListener('beforeunload', e => {
+    if (_isAnalyzing) {
+      e.preventDefault();
+      e.returnValue = '분석이 진행 중입니다. 지금 나가면 결과가 유실됩니다.';
+      return e.returnValue;
+    }
+  });
 })();
 
 function syncBtn() {
@@ -961,15 +987,55 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
                   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+/* 파일의 MIME 타입 추론 (IndexedDB에서 복원 시 file.type이 빈 경우 대비) */
+function inferMime(file) {
+  if (file.type) return file.type;
+  const map = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+  return map[xext(file.name)] || 'application/octet-stream';
+}
 
 /* ── Rubric file ── */
 async function loadRubricFile(file) {
   if (!file) return;
   const e = xext(file.name);
   if (!['pdf','docx'].includes(e)) { toast('PDF 또는 DOCX만 지원합니다', 'error'); return; }
+  if (file.size > CONFIG.MAX_FILE_SIZE_BYTES) {
+    toast(`파일 크기 초과 (최대 ${fsize(CONFIG.MAX_FILE_SIZE_BYTES)})`, 'error'); return;
+  }
   toast('파일 읽는 중...', 'info');
   try {
-    const text = (e==='pdf' ? await parsePDF(file) : await parseDOCX(file)).trim();
+    let text;
+    if (e === 'docx') {
+      text = (await parseDOCX(file)).trim();
+    } else {
+      // PDF: 먼저 텍스트 추출 시도
+      text = (await parsePDF(file)).trim();
+      const isScanPDF = !text || text.includes('텍스트를 추출할 수 없습니다');
+      if (isScanPDF) {
+        // 스캔 PDF → AI Vision으로 OCR
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const model  = document.getElementById('modelSelect').value;
+        const meta   = PROVIDER_META[getProvider()];
+        if (!meta.keyValid(apiKey)) {
+          throw new Error('스캔 PDF는 AI로 텍스트를 추출합니다. 먼저 API 키를 저장해주세요.');
+        }
+        toast('스캔 PDF 감지 — AI가 채점 기준을 추출하는 중...', 'info');
+        const buf = await file.arrayBuffer();
+        const imageData = await parsePDFImagesFromBuf(buf.slice(0));
+        if (!imageData.length) throw new Error('PDF에서 이미지를 추출할 수 없습니다');
+        text = (await callAIOnce({
+          apiKey, model, maxTokens: CONFIG.RUBRIC_OCR_MAX_TOKENS, imageData,
+          system: '당신은 PDF 이미지에서 채점 기준표(루브릭) 텍스트를 정확히 추출하는 OCR 전문 AI입니다. 원문을 그대로 추출하며, 설명이나 요약을 추가하지 않습니다.',
+          prompt: '첨부된 이미지는 수행평가 채점 기준표입니다. 이미지 속 모든 텍스트를 원문 그대로 한글로 추출하세요. 표 형식이면 평가 항목·기준·배점을 항목별로 정리하세요. 헤더나 설명 없이 추출된 텍스트만 출력하세요.'
+        })).trim();
+        if (!text) throw new Error('AI가 텍스트를 추출하지 못했습니다');
+      }
+    }
     if (!text) throw new Error('텍스트를 추출할 수 없습니다');
     document.getElementById('rubric').value = text;
     document.getElementById('rubricChip').innerHTML = `
@@ -1012,9 +1078,18 @@ function handleFiles(list) {
     if (!['pdf','docx','pptx','jpg','jpeg','png','webp'].includes(e)) {
       toast(`${f.name}: PDF·DOCX·PPTX·JPG·PNG만 지원합니다`, 'error'); continue;
     }
+    if (f.size > CONFIG.MAX_FILE_SIZE_BYTES) {
+      toast(`${f.name}: 파일 크기 초과 (${fsize(f.size)}, 최대 ${fsize(CONFIG.MAX_FILE_SIZE_BYTES)})`, 'error');
+      continue;
+    }
+    if (f.size === 0) {
+      toast(`${f.name}: 빈 파일입니다`, 'error'); continue;
+    }
     if (!files.find(x => x.name === f.name)) {
       files.push(f);
       _saveFile(f).catch(() => {});
+    } else {
+      toast(`${f.name}: 이미 업로드된 파일입니다`, 'info');
     }
   }
   renderFileList(); syncBtn();
@@ -1123,7 +1198,8 @@ async function parsePPTX(file) {
     throw new Error('PPTX 읽기 실패: ' + err.message);
   }
 }
-/* 이미지 스캔 PDF: 각 페이지를 canvas로 렌더링하여 base64 반환 */
+/* 이미지 스캔 PDF: 각 페이지를 canvas로 렌더링하여 base64 반환
+   — Vercel Edge Function 본문 4.5MB 제한에 맞춰 적응형으로 페이지 수 자동 조정 */
 async function _pdfImagesToBuf(buf) {
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(buf),
@@ -1133,16 +1209,29 @@ async function _pdfImagesToBuf(buf) {
   });
   const pdf = await loadingTask.promise;
   const images = [];
-  const maxPages = Math.min(pdf.numPages, 10); // 최대 10페이지
+  const maxPages = Math.min(pdf.numPages, CONFIG.PDF_MAX_PAGES);
+  let totalBytes = 0;
+  let truncated = false;
   for (let p = 1; p <= maxPages; p++) {
     const page = await pdf.getPage(p);
-    const viewport = page.getViewport({scale: 1.5});
+    const viewport = page.getViewport({scale: CONFIG.PDF_SCALE});
     const canvas = document.createElement('canvas');
     canvas.width  = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
     await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-    const b64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+    const b64 = canvas.toDataURL('image/jpeg', CONFIG.PDF_JPEG_QUALITY).split(',')[1];
+    if (totalBytes + b64.length > CONFIG.PDF_MAX_BODY_BYTES) {
+      truncated = true;
+      console.warn(`[스캔 PDF] 본문 크기 제한 초과 — ${p - 1}페이지까지만 처리합니다.`);
+      break;
+    }
+    totalBytes += b64.length;
     images.push({base64: b64, mimeType: 'image/jpeg'});
+    // 메모리 정리
+    canvas.width = 0; canvas.height = 0;
+  }
+  if (truncated && images.length > 0) {
+    toast(`스캔 PDF 크기 제한으로 ${images.length}페이지까지만 분석합니다`, 'info');
   }
   return images;
 }
@@ -1163,7 +1252,7 @@ async function parseImageFile(file) {
     reader.onerror = () => reject(new Error('이미지 읽기 실패'));
     reader.readAsDataURL(file);
   });
-  return [{base64: b64, mimeType: file.type || 'image/jpeg'}];
+  return [{base64: b64, mimeType: inferMime(file)}];
 }
 
 async function parseFile(file) {
@@ -1188,10 +1277,46 @@ async function parseFile(file) {
   throw new Error('지원하지 않는 형식');
 }
 
+/* ── SSE 공통 파서 ── */
+async function _readSSE(resp, onDelta, signal) {
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    if (signal?.aborted) { try { reader.cancel(); } catch {} throw new DOMException('Aborted', 'AbortError'); }
+    const {done, value} = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, {stream: true});
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (!raw || raw === '[DONE]') continue;
+      try { onDelta(JSON.parse(raw)); } catch {}
+    }
+  }
+}
+
+/* ── Rate limit 재시도 대기 ── */
+async function _waitWithRetry(onRetry, signal) {
+  for (let s = CONFIG.RETRY_WAIT_SECONDS; s > 0; s--) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    if (onRetry) onRetry(s);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
+/* ── HTTP 오류 파싱 ── */
+async function _parseErrMsg(resp) {
+  let msg = `HTTP ${resp.status}`;
+  try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+  return msg;
+}
+
 /* ── Claude API ── */
-async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
+async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries = CONFIG.MAX_RETRIES, maxTokens = CONFIG.STEP2_MAX_TOKENS, imageData}) {
   try {
-    // 메시지 콘텐츠 구성 (이미지 있으면 멀티모달)
     const msgContent = [];
     if (imageData) {
       (Array.isArray(imageData) ? imageData : [imageData]).forEach(img =>
@@ -1208,53 +1333,33 @@ async function callClaude({apiKey, model, prompt, system, onChunk, onDone, onErr
         'x-provider': 'anthropic',
       },
       body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        stream: true,
+        model, max_tokens: maxTokens, stream: true,
         system: [{ type:'text', text: system, cache_control:{type:'ephemeral'} }],
         messages: [{ role:'user', content: msgContent }]
-      })
+      }),
+      signal,
     });
     if (!resp.ok) {
-      let msg = `HTTP ${resp.status}`;
-      try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+      const msg = await _parseErrMsg(resp);
       if ((resp.status === 429 || msg.toLowerCase().includes('rate limit')) && _retries > 0) {
-        for (let s = 62; s > 0; s--) {
-          if (onRetry) onRetry(s);
-          await new Promise(r => setTimeout(r, 1000));
-        }
-        return callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
+        await _waitWithRetry(onRetry, signal);
+        return callClaude({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries: _retries - 1, maxTokens, imageData});
       }
       throw new Error(msg);
     }
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, {stream:true});
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw==='[DONE]') continue;
-        try {
-          const p = JSON.parse(raw);
-          if (p.type==='content_block_delta' && p.delta?.type==='text_delta')
-            onChunk(p.delta.text);
-        } catch {}
-      }
-    }
+    await _readSSE(resp, p => {
+      if (p.type === 'content_block_delta' && p.delta?.type === 'text_delta')
+        onChunk(p.delta.text);
+    }, signal);
     onDone();
   } catch (err) {
+    if (err.name === 'AbortError') return;  // 취소는 조용히 종료
     onError(err.message || String(err));
   }
 }
 
 /* ── Gemini API ── */
-async function callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
+async function callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries = CONFIG.MAX_RETRIES, maxTokens = CONFIG.STEP2_MAX_TOKENS, imageData}) {
   try {
     const parts = [];
     if (imageData) {
@@ -1273,52 +1378,31 @@ async function callGemini({apiKey, model, prompt, system, onChunk, onDone, onErr
     const resp = await fetch(url, {
       method: 'POST',
       headers: {'content-type': 'application/json'},
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal,
     });
-
     if (!resp.ok) {
-      let msg = `HTTP ${resp.status}`;
-      try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+      const msg = await _parseErrMsg(resp);
       if (resp.status === 429 && _retries > 0) {
-        for (let s = 62; s > 0; s--) {
-          if (onRetry) onRetry(s);
-          await new Promise(r => setTimeout(r, 1000));
-        }
-        return callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
+        await _waitWithRetry(onRetry, signal);
+        return callGemini({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries: _retries - 1, maxTokens, imageData});
       }
       throw new Error(msg);
     }
-
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, {stream: true});
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (!raw || raw === '[DONE]') continue;
-        try {
-          const p = JSON.parse(raw);
-          const text = p?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) onChunk(text);
-        } catch {}
-      }
-    }
+    await _readSSE(resp, p => {
+      const text = p?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) onChunk(text);
+    }, signal);
     onDone();
   } catch (err) {
+    if (err.name === 'AbortError') return;
     onError(err.message || String(err));
   }
 }
 
 /* ── OpenAI API ── */
-async function callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries = 2, maxTokens = 2500, imageData}) {
+async function callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries = CONFIG.MAX_RETRIES, maxTokens = CONFIG.STEP2_MAX_TOKENS, imageData}) {
   try {
-    // 사용자 메시지 콘텐츠 구성 (이미지 있으면 멀티모달)
     const userContent = [];
     if (imageData) {
       (Array.isArray(imageData) ? imageData : [imageData]).forEach(img =>
@@ -1331,15 +1415,12 @@ async function callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onErr
     userContent.push({type: 'text', text: prompt});
 
     const body = {
-      model,
-      stream: true,
-      max_tokens: maxTokens,
+      model, stream: true, max_tokens: maxTokens,
       messages: [
         {role: 'system', content: system},
         {role: 'user', content: userContent.length === 1 ? userContent[0].text : userContent}
       ]
     };
-
     const resp = await fetch('/api/proxy', {
       method: 'POST',
       headers: {
@@ -1347,44 +1428,24 @@ async function callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onErr
         'x-api-key': apiKey,
         'x-provider': 'openai',
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal,
     });
-
     if (!resp.ok) {
-      let msg = `HTTP ${resp.status}`;
-      try { const e = await resp.json(); msg = e?.error?.message || msg; } catch {}
+      const msg = await _parseErrMsg(resp);
       if (resp.status === 429 && _retries > 0) {
-        for (let s = 62; s > 0; s--) {
-          if (onRetry) onRetry(s);
-          await new Promise(r => setTimeout(r, 1000));
-        }
-        return callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, _retries: _retries - 1, maxTokens, imageData});
+        await _waitWithRetry(onRetry, signal);
+        return callOpenAI({apiKey, model, prompt, system, onChunk, onDone, onError, onRetry, signal, _retries: _retries - 1, maxTokens, imageData});
       }
       throw new Error(msg);
     }
-
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, {stream: true});
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (raw === '[DONE]') continue;
-        try {
-          const p = JSON.parse(raw);
-          const text = p?.choices?.[0]?.delta?.content;
-          if (text) onChunk(text);
-        } catch {}
-      }
-    }
+    await _readSSE(resp, p => {
+      const text = p?.choices?.[0]?.delta?.content;
+      if (text) onChunk(text);
+    }, signal);
     onDone();
   } catch (err) {
+    if (err.name === 'AbortError') return;
     onError(err.message || String(err));
   }
 }
@@ -1528,8 +1589,13 @@ async function startAnalysis() {
   localStorage.setItem(meta.modelKey,   model);
 
   results = {};
+  _isAnalyzing = true;
+  _abortCtrl = new AbortController();
+  const signal = _abortCtrl.signal;
   const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true; btn.textContent = '⏳ 생성 중...';
+  btn.disabled = false;
+  btn.textContent = '⏹ 분석 중 — 클릭하여 취소';
+  btn.onclick = cancelAnalysis;
 
   document.getElementById('guideCard').style.display = 'none';
   const container = document.getElementById('resultsContainer');
@@ -1538,10 +1604,14 @@ async function startAnalysis() {
 
   // 파일 1개 → task 1개 (모둠 파일도 동일하게 1회 요약)
   const tasks = [];
+  const keyCount = {};  // 동일 키 중복 방지용
   files.forEach((file, fi) => {
     const { students, title, isGroup } = getStudentsFromFile(file);
-    const key         = isGroup ? title || file.name.replace(/\.[^.]+$/, '') : students[0];
-    const displayName = isGroup ? `${title} (${students.join(', ')})` : students[0];
+    let key = isGroup ? title || file.name.replace(/\.[^.]+$/, '') : students[0];
+    // 중복 시 (2), (3) 접미사
+    keyCount[key] = (keyCount[key] || 0) + 1;
+    if (keyCount[key] > 1) key = `${key} (${keyCount[key]})`;
+    const displayName = isGroup ? `${key} — ${students.join(', ')}` : key;
     tasks.push({ file, studentName: key, displayName, title, isGroup, cid: `rc-${fi}` });
   });
 
@@ -1550,20 +1620,18 @@ async function startAnalysis() {
     container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.file, t.displayName, t.isGroup));
   });
 
-  // 파일별로 처리 (같은 파일은 한 번만 파싱)
-  let prevFile = null, parsedResult = {text: '', imageData: null};
   for (const task of tasks) {
+    if (signal.aborted) {
+      setStatus(task.cid, 'error', '취소됨');
+      continue;
+    }
     const { file, studentName, displayName, title, isGroup, cid } = task;
 
     setStatus(cid, 'running', '파일 읽는 중...');
     setProg(cid, 10);
 
     try {
-      // 같은 파일이면 재파싱 생략
-      if (file !== prevFile) {
-        parsedResult = await parseFile(file);
-        prevFile = file;
-      }
+      const parsedResult = await parseFile(file);
       const parsedContent = parsedResult.text;
       const imageData     = parsedResult.imageData;
       const hasImages     = Array.isArray(imageData) && imageData.length > 0;
@@ -1576,10 +1644,11 @@ async function startAnalysis() {
       let extractedContent;
       try {
         extractedContent = await callAIOnce({
-          ...step1, apiKey, model, maxTokens: 1500, imageData,
+          ...step1, apiKey, model, maxTokens: CONFIG.STEP1_MAX_TOKENS, imageData, signal,
           onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`)
         });
       } catch (err) {
+        if (signal.aborted) { setStatus(cid, 'error', '취소됨'); continue; }
         throw new Error('1단계 추출 실패: ' + err.message);
       }
 
@@ -1596,7 +1665,7 @@ async function startAnalysis() {
 
       await new Promise(resolve => {
         callAI({
-          ...step2, apiKey, model, maxTokens: 2500,
+          ...step2, apiKey, model, maxTokens: CONFIG.STEP2_MAX_TOKENS, signal,
           onChunk(chunk) {
             fullText += chunk;
             setProg(cid, Math.min(95, 50 + fullText.length / 20));
@@ -1615,6 +1684,7 @@ async function startAnalysis() {
           },
           onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`),
           onError(msg) {
+            if (signal.aborted) { setStatus(cid, 'error', '취소됨'); resolve(); return; }
             document.getElementById(`${cid}-body`).innerHTML =
               `<p style="color:#b91c1c;font-size:.83rem;">❌ 오류: ${esc(msg)}</p>`;
             setStatus(cid, 'error', '오류 발생');
@@ -1629,17 +1699,31 @@ async function startAnalysis() {
       setStatus(cid, 'error', '오류 발생');
     }
 
-    // 연속 요청 시 Rate Limit 방지용 딜레이 (마지막 task 제외)
-    if (task !== tasks[tasks.length - 1]) {
-      await new Promise(r => setTimeout(r, 2000));
+    // 연속 요청 시 Rate Limit 방지용 딜레이 (마지막 task 제외, 취소 시 스킵)
+    if (task !== tasks[tasks.length - 1] && !signal.aborted) {
+      await new Promise(r => setTimeout(r, CONFIG.TASK_DELAY_MS));
     }
   }
 
-  btn.disabled = false; btn.textContent = '✨ 수업 관찰 내용 생성';
+  // 종료 처리
+  _isAnalyzing = false;
+  _abortCtrl = null;
+  btn.disabled = false;
+  btn.textContent = '✨ 수업 관찰 내용 생성';
+  btn.onclick = startAnalysis;
+  syncBtn();
   if (Object.keys(results).length) {
     document.getElementById('globalAct').style.display = 'block';
     toast(`${Object.keys(results).length}명 생성 완료!`, 'success');
   }
+}
+
+/* ── 분석 취소 ── */
+function cancelAnalysis() {
+  if (!_abortCtrl) return;
+  if (!confirm('분석을 취소할까요? 지금까지 완료된 결과는 유지됩니다.')) return;
+  _abortCtrl.abort();
+  toast('취소 요청을 전달했습니다...', 'info');
 }
 
 /* ── 3버전 파싱 ── */
