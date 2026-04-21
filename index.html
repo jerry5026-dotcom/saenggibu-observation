@@ -596,15 +596,43 @@
         <li>AI 제공자(Claude·ChatGPT·Gemini)를 선택하고 <strong>API 키</strong>와 <strong>과목명</strong>을 입력하세요</li>
         <li>채점 기준(루브릭)을 입력하거나 파일로 불러오세요<br>
             <span style="font-size:.76rem; color:#94a3b8;">없어도 되지만, 있을수록 정확도 향상</span></li>
-        <li>학생 수행평가 파일(PDF·DOCX·PPTX)을 업로드하세요<br>
-            <span style="font-size:.76rem; color:#94a3b8;">파일명 = 학생 이름으로 사용 (예: 홍길동.pdf)</span></li>
+        <li>학생 수행평가 파일(PDF·DOCX·PPTX·JPG·PNG)을 업로드하세요 <span style="font-size:.76rem; color:#94a3b8;">(파일명 규칙은 아래 참고)</span></li>
         <li><strong>수업 관찰 내용 생성</strong> 버튼 클릭</li>
         <li>결과 카드의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
                target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>
             수업 관찰 내용란에 붙여넣기 → <strong>✨ 생성하기</strong></li>
       </ol>
+
       <div class="divider"></div>
+
+      <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:10px 12px; font-size:.78rem; color:#92400e; line-height:1.75; margin-bottom:10px;">
+        <strong>📁 파일명 규칙</strong><br>
+        <table style="width:100%; border-collapse:collapse; margin-top:6px; font-size:.76rem;">
+          <tr style="border-bottom:1px solid #fcd34d;">
+            <td style="padding:4px 6px; font-weight:700; white-space:nowrap;">예시</td>
+            <td style="padding:4px 6px; font-weight:700;">의미</td>
+          </tr>
+          <tr style="border-bottom:1px dashed #fcd34d;">
+            <td style="padding:4px 6px; white-space:nowrap;"><code>홍길동.pdf</code></td>
+            <td style="padding:4px 6px;">단일 학생 · 단일 파일</td>
+          </tr>
+          <tr style="border-bottom:1px dashed #fcd34d;">
+            <td style="padding:4px 6px; white-space:nowrap;"><code>홍길동<strong style="color:#dc2626;">__</strong>보고서.pdf</code><br><code>홍길동<strong style="color:#dc2626;">__</strong>발표.pptx</code></td>
+            <td style="padding:4px 6px;"><strong>🔗 홍길동 1명 — 2개 파일 통합 분석</strong><br>
+            <span style="font-size:.72rem; color:#a16207;">언더바 2개(<code>__</code>)로 학생 이름과 파일 설명을 구분하면, 같은 학생 이름을 가진 파일들이 자동으로 묶여 하나의 관찰 내용으로 생성됩니다. (API 비용 절감 ✓)</span></td>
+          </tr>
+          <tr style="border-bottom:1px dashed #fcd34d;">
+            <td style="padding:4px 6px; white-space:nowrap;"><code>1모둠-홍길동,김철수,이영희.pdf</code></td>
+            <td style="padding:4px 6px;">모둠 활동 (이름을 쉼표로 구분)</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 6px; white-space:nowrap;"><code>1모둠-홍길동,김철수<strong style="color:#dc2626;">__</strong>보고서.pdf</code><br><code>1모둠-홍길동,김철수<strong style="color:#dc2626;">__</strong>발표.pptx</code></td>
+            <td style="padding:4px 6px;"><strong>🔗 모둠 + 통합 분석 조합</strong></td>
+          </tr>
+        </table>
+      </div>
+
       <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; font-size:.78rem; color:#1e40af; line-height:1.7;">
         <strong>📌 출력 형식</strong><br>
         생기부 작성 도우미가 요구하는 <strong>"~함." 종결형 관찰 문장</strong>을 줄바꿈으로 나열합니다.<br>
@@ -1058,17 +1086,29 @@ function clearRubric() {
   localStorage.removeItem('app_rubric');
 }
 
-/* ── 파일명에서 학생 이름 추출 ── */
+/* ── 파일명에서 학생 이름 + 파일 설명 추출 ──
+   규칙 우선순위:
+   - "학생키__파일설명.확장자"  → __로 앞뒤 분리 (같은 학생키끼리 통합 분석)
+   - "제목-이름1,이름2,이름3.확장자" → 모둠 (하위 호환)
+   - "홍길동.pdf" → 단일 학생
+*/
 function getStudentsFromFile(file) {
   const base = file.name.replace(/\.[^.]+$/, '');
-  // "제목-이름1,이름2,이름3" 또는 "이름1,이름2,이름3" 패턴 감지
-  const dashIdx = base.lastIndexOf('-');
-  const namePart = dashIdx >= 0 ? base.slice(dashIdx + 1) : base;
-  const title    = dashIdx >= 0 ? base.slice(0, dashIdx).trim() : base;
+  // 1단계: __로 학생 키 분리
+  const uIdx = base.indexOf('__');
+  const keyPart  = uIdx > 0 ? base.slice(0, uIdx).trim() : base;
+  const fileDesc = uIdx > 0 ? base.slice(uIdx + 2).trim() : '';
+
+  // 2단계: 학생 키 안에 모둠 패턴 감지 ("제목-이름1,이름2")
+  const dashIdx  = keyPart.lastIndexOf('-');
+  const namePart = dashIdx >= 0 ? keyPart.slice(dashIdx + 1) : keyPart;
+  const title    = dashIdx >= 0 ? keyPart.slice(0, dashIdx).trim() : keyPart;
   const names    = namePart.split(/[,，]/).map(s => s.trim()).filter(s => s.length >= 1);
-  return names.length > 1
-    ? { title, students: names, isGroup: true }
-    : { title: base, students: [base], isGroup: false };
+
+  if (names.length > 1) {
+    return { studentKey: keyPart, title, students: names, isGroup: true, fileDesc };
+  }
+  return { studentKey: keyPart, title: keyPart, students: [keyPart], isGroup: false, fileDesc };
 }
 
 /* ── Student files ── */
@@ -1103,18 +1143,32 @@ function removeFile(i) {
 function renderFileList() {
   const el = document.getElementById('fileList');
   if (!files.length) { el.innerHTML = ''; return; }
+  // 학생키별 그룹화 상태 계산
+  const keyGroup = {};
+  files.forEach(f => {
+    const { studentKey } = getStudentsFromFile(f);
+    (keyGroup[studentKey] ||= []).push(f.name);
+  });
   el.innerHTML = files.map((f, i) => {
-    const { students, isGroup } = getStudentsFromFile(f);
-    const badge = isGroup
+    const { students, isGroup, studentKey, fileDesc } = getStudentsFromFile(f);
+    const groupSize = keyGroup[studentKey].length;
+    const mergedBadge = groupSize > 1
+      ? `<span class="group-badge" style="background:#fef3c7;color:#b45309;border-color:#fcd34d;">🔗 통합(${studentKey}) ${groupSize}개 파일</span>`
+      : '';
+    const descBadge = fileDesc
+      ? `<span class="group-badge" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;">📄 ${esc(fileDesc)}</span>`
+      : '';
+    const groupBadge = isGroup
       ? `<span class="group-badge">모둠 ${students.length}명: ${students.join(', ')}</span>`
       : '';
+    const badges = [mergedBadge, descBadge, groupBadge].filter(b => b).join(' ');
     return `
     <div class="f-chip" style="flex-wrap:wrap; gap:6px;">
       <span>${ficon(f.name)}</span>
       <span class="fn" title="${esc(f.name)}">${esc(f.name)}</span>
       <span class="fs">${fsize(f.size)}</span>
       <button class="fd" onclick="removeFile(${i})">✕</button>
-      ${badge ? `<div style="width:100%; padding-left:24px;">${badge}</div>` : ''}
+      ${badges ? `<div style="width:100%; padding-left:24px; display:flex; gap:4px; flex-wrap:wrap;">${badges}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -1470,20 +1524,21 @@ function callAIOnce(params) {
 }
 
 /* ── Build prompts (2단계) ── */
-function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content, isGroup, groupTitle, hasImages }) {
+function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content, isGroup, groupTitle, hasImages, fileCount = 1 }) {
   const system = `당신은 학생 수행평가 결과물의 핵심 내용을 구조적으로 추출하는 분석 AI입니다.
 교사가 수행평가 결과물의 내용을 정확히 파악할 수 있도록 빠짐없이 정리합니다.
-학생 이름은 출력에 포함하지 않습니다.`;
+학생 이름은 출력에 포함하지 않습니다.${fileCount > 1 ? `\n\n여러 파일(${fileCount}개)이 제공되면 이들은 같은 학생/모둠의 동일 과제에 대한 서로 다른 결과물(예: 보고서 + 발표자료)입니다. 파일 간 중복·보완 관계를 파악하여 하나의 통합된 분석을 수행하세요.` : ''}`;
 
   const rubricSection = rubric ? `\n## 채점 기준 (루브릭)\n${rubric}\n` : '';
   const actSection    = actType ? `수행평가 유형: ${actType}\n` : '';
   const topicSection  = topic   ? `단원/주제: ${topic}\n`       : '';
   const levelSection  = achieveLevel ? `성취 수준: ${achieveLevel}\n` : '';
   const extraSection  = extra   ? `\n## 수업 특이사항\n${extra}\n` : '';
+  const mergedNote    = fileCount > 1 ? `\n※ 총 ${fileCount}개 파일이 하나의 제출물로 통합되어 제공됩니다.\n` : '';
 
   const contentSection = hasImages
-    ? `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''} (이미지 첨부)\n첨부된 이미지가 수행평가 결과물입니다. 이미지 안의 모든 텍스트와 내용을 꼼꼼히 분석하세요.`
-    : `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}\n\n${content}`;
+    ? `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''} (이미지 첨부)${mergedNote}\n첨부된 이미지가 수행평가 결과물입니다. 이미지 안의 모든 텍스트와 내용을 꼼꼼히 분석하세요.${content ? `\n\n[참고 텍스트]\n${content}` : ''}`
+    : `## 수행평가 결과물${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}${mergedNote}\n${content}`;
 
   const prompt = `## 수행평가 정보
 과목: ${subject}
@@ -1602,22 +1657,36 @@ async function startAnalysis() {
   container.innerHTML = '';
   document.getElementById('globalAct').style.display = 'none';
 
-  // 파일 1개 → task 1개 (모둠 파일도 동일하게 1회 요약)
-  const tasks = [];
-  const keyCount = {};  // 동일 키 중복 방지용
-  files.forEach((file, fi) => {
-    const { students, title, isGroup } = getStudentsFromFile(file);
-    let key = isGroup ? title || file.name.replace(/\.[^.]+$/, '') : students[0];
-    // 중복 시 (2), (3) 접미사
-    keyCount[key] = (keyCount[key] || 0) + 1;
-    if (keyCount[key] > 1) key = `${key} (${keyCount[key]})`;
-    const displayName = isGroup ? `${key} — ${students.join(', ')}` : key;
-    tasks.push({ file, studentName: key, displayName, title, isGroup, cid: `rc-${fi}` });
+  // 학생키(studentKey)별로 파일 그룹화 — 동일 학생의 여러 파일은 하나의 task로 통합
+  const grouped = {};  // studentKey → { files, students, title, isGroup, fileDescs }
+  files.forEach(file => {
+    const { studentKey, students, title, isGroup, fileDesc } = getStudentsFromFile(file);
+    if (!grouped[studentKey]) {
+      grouped[studentKey] = { files: [], students, title, isGroup, fileDescs: [] };
+    }
+    grouped[studentKey].files.push(file);
+    if (fileDesc) grouped[studentKey].fileDescs.push(fileDesc);
+  });
+
+  const tasks = Object.entries(grouped).map(([studentKey, g], idx) => {
+    const mergedCount = g.files.length;
+    const descSuffix  = g.fileDescs.length ? ` (${g.fileDescs.join(' + ')})` : (mergedCount > 1 ? ` (${mergedCount}개 파일)` : '');
+    const displayName = g.isGroup
+      ? `${studentKey}${descSuffix} — ${g.students.join(', ')}`
+      : `${studentKey}${descSuffix}`;
+    return {
+      files: g.files,
+      studentName: studentKey,
+      displayName,
+      title: g.title,
+      isGroup: g.isGroup,
+      cid: `rc-${idx}`,
+    };
   });
 
   // Placeholder cards (모두)
   tasks.forEach(t => {
-    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.file, t.displayName, t.isGroup));
+    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.files[0], t.displayName, t.isGroup, t.files.length));
   });
 
   for (const task of tasks) {
@@ -1625,22 +1694,45 @@ async function startAnalysis() {
       setStatus(task.cid, 'error', '취소됨');
       continue;
     }
-    const { file, studentName, displayName, title, isGroup, cid } = task;
+    const { files: taskFiles, studentName, displayName, title, isGroup, cid } = task;
 
-    setStatus(cid, 'running', '파일 읽는 중...');
+    setStatus(cid, 'running', taskFiles.length > 1 ? `파일 ${taskFiles.length}개 읽는 중...` : '파일 읽는 중...');
     setProg(cid, 10);
 
     try {
-      const parsedResult = await parseFile(file);
-      const parsedContent = parsedResult.text;
-      const imageData     = parsedResult.imageData;
+      // 다중 파일 통합 파싱 — 텍스트는 구분자로 합치고, 이미지는 누적
+      const textParts = [];
+      const allImages = [];
+      let totalImageBytes = 0;
+      for (let i = 0; i < taskFiles.length; i++) {
+        const f = taskFiles[i];
+        setStatus(cid, 'running', `파일 읽는 중 (${i + 1}/${taskFiles.length}): ${f.name}`);
+        const parsed = await parseFile(f);
+        const header = taskFiles.length > 1
+          ? `===== [파일 ${i + 1}: ${f.name}] =====\n`
+          : '';
+        textParts.push(header + (parsed.text || ''));
+        if (Array.isArray(parsed.imageData)) {
+          for (const img of parsed.imageData) {
+            totalImageBytes += (img.base64 || '').length;
+            if (totalImageBytes > CONFIG.PDF_MAX_BODY_BYTES) {
+              console.warn(`[통합 분석] 이미지 총 크기 제한 초과 — 일부 이미지는 제외됩니다`);
+              toast('여러 파일의 이미지 총 크기가 커서 일부는 분석에서 제외됩니다', 'info');
+              break;
+            }
+            allImages.push(img);
+          }
+        }
+      }
+      const parsedContent = textParts.join('\n\n');
+      const imageData     = allImages.length ? allImages : null;
       const hasImages     = Array.isArray(imageData) && imageData.length > 0;
 
       // Step 1: 핵심 내용 추출
       setStatus(cid, 'running', hasImages ? '1단계: 이미지 분석 중...' : '1단계: 핵심 내용 추출 중...');
       setProg(cid, 20);
 
-      const step1 = buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content: parsedContent, isGroup, groupTitle: isGroup ? title : '', hasImages });
+      const step1 = buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel, content: parsedContent, isGroup, groupTitle: isGroup ? title : '', hasImages, fileCount: taskFiles.length });
       let extractedContent;
       try {
         extractedContent = await callAIOnce({
@@ -1796,13 +1888,16 @@ function renderObs(text, streaming) {
 }
 
 /* ── Placeholder card ── */
-function placeholderCard(cid, file, name, isGroup) {
-  const groupTag = isGroup ? ' <span style="font-size:.68rem;opacity:.75;">(모둠)</span>' : '';
+function placeholderCard(cid, file, name, isGroup, fileCount = 1) {
+  const groupTag  = isGroup ? ' <span style="font-size:.68rem;opacity:.75;">(모둠)</span>' : '';
+  const mergedTag = fileCount > 1
+    ? ` <span style="font-size:.68rem;opacity:.85;background:rgba(255,255,255,.18);padding:1px 6px;border-radius:99px;">🔗 ${fileCount}개 파일 통합</span>`
+    : '';
   return `
   <div class="result-card" id="${cid}" style="margin-bottom:13px;">
     <div class="rc-head">
       <div>
-        <h3>${ficon(file.name)} ${esc(name)}${groupTag}</h3>
+        <h3>${ficon(file.name)} ${esc(name)}${groupTag}${mergedTag}</h3>
         <div class="rc-sub" id="${cid}-sub">대기 중...</div>
       </div>
       <span class="badge b-wait" id="${cid}-badge">대기</span>
