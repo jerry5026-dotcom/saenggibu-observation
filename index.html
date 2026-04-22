@@ -480,9 +480,9 @@
       <div style="margin-top:11px;">
         <label class="fl">사용 모델</label>
         <select id="modelSelect">
-          <option value="claude-sonnet-4-6">claude-sonnet-4-6 (권장)</option>
-          <option value="claude-opus-4-7">claude-opus-4-7 (고품질 · 느림)</option>
-          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (빠름)</option>
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — 균형 · 권장 · 유료</option>
+          <option value="claude-opus-4-7">Claude Opus 4.7 — 최신 최고품질 · 유료</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 — 빠름 저렴 · 유료</option>
         </select>
       </div>
     </div>
@@ -694,25 +694,28 @@ let _isAnalyzing = false;
 let _abortCtrl   = null;
 
 /* ── API 제공자 ── */
-// 모델 목록 (공식 문서 기준 최신 버전, 2026년 4월 기준)
+// 모델 목록 — 공식 문서 기준 최신 3종 (2026년 4월 기준)
+//   Claude:  platform.claude.com/docs/en/about-claude/models/overview
+//   OpenAI:  platform.openai.com/docs/models
+//   Gemini:  ai.google.dev/gemini-api/docs/models
 const PROVIDER_MODELS = {
   anthropic: [
     // 모두 유료 (console.anthropic.com)
-    { value: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6 — 균형 · 권장 · 유료' },
-    { value: 'claude-opus-4-7',           label: 'Claude Opus 4.7 — 최신 최고품질 · 유료' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 — 빠름 · 유료' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 — 균형 · 권장 · 유료 ($3/$15)' },
+    { value: 'claude-opus-4-7',   label: 'Claude Opus 4.7 — 최신 최고품질 · 유료 ($5/$25)' },
+    { value: 'claude-haiku-4-5',  label: 'Claude Haiku 4.5 — 빠름 저렴 · 유료 ($1/$5)' },
   ],
   openai: [
-    // 모두 유료 (platform.openai.com)
-    { value: 'gpt-5.4-mini', label: 'GPT-5.4 mini — 최신 균형 · 권장 · 유료' },
-    { value: 'gpt-5.4',      label: 'GPT-5.4 — 최신 최고품질 · 유료' },
-    { value: 'gpt-4o-mini',  label: 'GPT-4o mini — 빠름 저렴 · 유료' },
+    // 모두 유료 (platform.openai.com) — GPT-5.4 계열 (2026.03 출시)
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4 mini — 균형 · 권장 · 유료 ($0.75/$4.50)' },
+    { value: 'gpt-5.4',      label: 'GPT-5.4 — 최신 최고품질 · 유료 ($2.50/$15)' },
+    { value: 'gpt-5.4-nano', label: 'GPT-5.4 nano — 빠름 저렴 · 유료 ($0.20/$1.25)' },
   ],
   gemini: [
-    // 일부 무료 (aistudio.google.com)
-    { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash — 균형 · 권장 · 무료' },
-    { value: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro — 고품질 · 무료' },
-    { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview — 최신 실험 · 유료' },
+    // Flash 계열은 무료 (감소된 쿼터) · Pro는 2026.04부터 유료 전용 (aistudio.google.com)
+    { value: 'gemini-3-flash-preview',       label: 'Gemini 3 Flash — 균형 · 권장 · 무료 (축소 쿼터)' },
+    { value: 'gemini-3.1-pro-preview',       label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료 ($2/$12)' },
+    { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite — 빠름 저렴 · 무료 (축소 쿼터)' },
   ]
 };
 
