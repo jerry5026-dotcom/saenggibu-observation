@@ -800,16 +800,16 @@
           <div class="obs-content">
             <p class="hint">해당 버튼을 다시 클릭하면 해제됩니다.</p>
             <div class="act-cb-group" id="achieveLevelGroup">
-              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="A">A</label>
-              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="B">B</label>
-              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="C">C</label>
-              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="D">D</label>
-              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="E">E</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="상">상</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="중">중</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="하">하</label>
             </div>
             <div style="margin-top:6px; padding:7px 10px; background:#f1f5f9; border-left:3px solid #1e40af; border-radius:6px; font-size:.72rem; color:#475569; line-height:1.55;">
               <strong style="color:#1e40af;">💡 어디에 영향을 주나요?</strong><br>
               <strong>관찰 내용 생성 모드</strong>에만 적용되어 <u>문장의 표현 톤</u>을 조절합니다.<br>
-              · A: 심층·독창·탁월함이 드러나도록 &nbsp; · C: 핵심 내용을 균형 있게 &nbsp; · E: 사실 기반으로 미흡함도 포함<br>
+              · <strong>상</strong>: 심층·독창·탁월함이 드러나도록 강조<br>
+              · <strong>중</strong>: 핵심 내용을 균형 있게 충실히 서술<br>
+              · <strong>하</strong>: 결과물에서 다룬 내용을 사실 기반으로 담담하게 서술<br>
               <span style="color:#64748b;">채점 모드에서는 편향 방지를 위해 AI에 전달되지 않습니다 (루브릭만으로 순수 채점).</span>
             </div>
           </div>
@@ -1340,7 +1340,13 @@ function getAchieveLevel() {
   return checked ? checked.value : '';
 }
 function _restoreAchieveLevel() {
-  const v = localStorage.getItem('app_achieveLevel');
+  let v = localStorage.getItem('app_achieveLevel');
+  // 이전 A~E 값은 새 체계(상/중/하)로 매핑 (하위 호환)
+  const legacyMap = { A: '상', B: '상', C: '중', D: '하', E: '하' };
+  if (v && legacyMap[v]) {
+    v = legacyMap[v];
+    localStorage.setItem('app_achieveLevel', v);
+  }
   if (v) {
     document.querySelectorAll('#achieveLevelGroup .act-cb').forEach(label => {
       const cb = label.querySelector('input');
@@ -2042,11 +2048,9 @@ ${contentSection}
 function buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, lengthOpt, isGroup, groupTitle }) {
   const charLimit = parseInt(lengthOpt) || 200;
   const levelGuide = {
-    'A': '최상위 수준 — 심층적 분석, 독창적 관점, 탁월한 완성도가 드러나도록 표현',
-    'B': '상위 수준 — 핵심 내용을 충실히 반영하고 논리적 구성이 잘 드러나도록 표현',
-    'C': '중간 수준 — 핵심 내용을 균형 있게 반영',
-    'D': '하위 수준 — 결과물에서 다룬 기본 내용을 사실대로 반영',
-    'E': '최하위 수준 — 결과물에서 다룬 내용을 사실대로 반영하고 미흡한 부분도 포함',
+    '상': '상위 수준 — 심층적 분석, 독창적 관점, 탁월한 완성도가 드러나도록 표현',
+    '중': '중위 수준 — 핵심 내용을 충실히 반영하고 논리적 구성이 잘 드러나도록 균형 있게 서술',
+    '하': '하위 수준 — 결과물에서 다룬 기본 내용을 사실 기반으로 담담하게 반영',
   }[achieveLevel] || '';
 
   const system = `당신은 수행평가 결과물 핵심 내용 요약 전문 AI입니다.
@@ -3009,6 +3013,11 @@ async function loadAndRenderHistory() {
     el.innerHTML = entries.slice(0, 50).map(e => {
       const dt = new Date(e.id).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
       const levelColors = {
+        // 새 체계 (상/중/하)
+        '상': {bg:'#dcfce7', color:'#15803d'},
+        '중': {bg:'#fef9c3', color:'#854d0e'},
+        '하': {bg:'#fee2e2', color:'#b91c1c'},
+        // 하위 호환 (이전 A~E 이력)
         A: {bg:'#dcfce7', color:'#15803d'},
         B: {bg:'#dbeafe', color:'#1d4ed8'},
         C: {bg:'#fef9c3', color:'#854d0e'},
