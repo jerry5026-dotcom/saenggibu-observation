@@ -3384,11 +3384,20 @@ function cancelAnalysis() {
   toast('취소 요청을 전달했습니다...', 'info');
 }
 
-/* ── 3버전 파싱 ── */
+/* ── 3버전 파싱 ──
+   프롬프트 복사 모드에서는 응답에 관찰 + 채점 JSON이 함께 있을 수 있어,
+   JSON 블록(<<<JSON_START>>>…<<<JSON_END>>>)을 먼저 제거한 뒤 버전을 분리한다. */
 function parseVersions(text) {
-  const parts = text.split(/<<<버전\d+>>>/);
+  // JSON 블록 시작 전까지만 남기기
+  let t = text;
+  const jsonStartIdx = t.indexOf('<<<JSON_START>>>');
+  if (jsonStartIdx !== -1) t = t.slice(0, jsonStartIdx);
+  // 혹시 AI가 JSON을 마크다운 코드블록으로 감싸 보냈다면 그것도 제거
+  t = t.replace(/```(?:json)?[\s\S]*?```/g, '');
+  // 버전 마커로 분할
+  const parts = t.split(/<<<버전\d+>>>/);
   const versions = parts.slice(1).map(v => v.trim()).filter(v => v.length > 0);
-  return versions.length >= 1 ? versions : [text.trim()];
+  return versions.length >= 1 ? versions : [t.trim()];
 }
 
 /* ── 3버전 결과 카드 렌더링 ── */
