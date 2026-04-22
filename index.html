@@ -464,7 +464,57 @@
       padding: 1px 6px; border-radius: 99px;
     }
 
-    /* ── 발표 관찰 체크리스트 ── */
+    /* ── 관찰 체크리스트 아코디언 ── */
+    .obs-details {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .obs-summary {
+      padding: 10px 13px;
+      font-size: .82rem; font-weight: 700;
+      color: #475569;
+      cursor: pointer; user-select: none;
+      background: #f8fafc;
+      list-style: none;
+      display: flex; align-items: center; gap: 8px;
+      transition: background .15s, color .15s;
+    }
+    .obs-summary::-webkit-details-marker { display: none; }
+    .obs-summary::before {
+      content: '▶';
+      font-size: .68rem;
+      color: #94a3b8;
+      transition: transform .22s;
+    }
+    .obs-details[open] .obs-summary::before {
+      transform: rotate(90deg);
+    }
+    .obs-details[open] .obs-summary {
+      background: #eff6ff;
+      color: #1e40af;
+      border-bottom: 1.5px solid #e2e8f0;
+    }
+    .obs-summary:hover { background: #eff6ff; color: #1e40af; }
+    .obs-summary-hint {
+      margin-left: auto;
+      font-size: .7rem; font-weight: 500;
+      color: #94a3b8;
+    }
+    .obs-summary-filled {
+      background: #dcfce7;
+      color: #15803d;
+      border-radius: 99px;
+      padding: 1px 7px;
+      font-size: .65rem; font-weight: 700;
+    }
+    .obs-content {
+      padding: 11px 13px;
+    }
+    .obs-content .hint { margin-top: 0; margin-bottom: 8px; }
+
+    /* ── 발표/협업 관찰 체크리스트 (공통) ── */
     .pres-obs-box {
       padding: 10px 12px;
       background: #fefce8; border: 1.5px solid #fde68a;
@@ -755,15 +805,33 @@
         </div>
       </div>
 
-      <!-- 발표 관찰 체크리스트 — 발표/PPT 유형일 때만 표시 -->
-      <div id="presObsWrap" style="display:none; margin-top:13px;">
-        <div class="sub-title">🎤 발표 관찰 체크리스트</div>
-        <p class="hint" style="margin-bottom:7px;">발표 현장에서 교사가 관찰한 내용을 체크하면 채점·관찰 결과에 반영됩니다 (선택 사항).</p>
-        <div class="pres-obs-box" id="presObsBox">
-          <!-- JS로 렌더링 -->
-        </div>
-        <textarea id="presMemo" style="margin-top:7px; min-height:46px; resize:vertical;"
-          placeholder="기타 발표 관찰 메모 (예: '질문에 논리적으로 답변', '시간 초과 1분' 등)"></textarea>
+      <!-- 현장 관찰 체크리스트 (발표·협업) — 항상 표시, 아코디언 -->
+      <div style="margin-top:13px; display:flex; flex-direction:column; gap:7px;">
+        <details class="obs-details">
+          <summary class="obs-summary">
+            🎤 발표 관찰 체크리스트
+            <span class="obs-summary-hint" id="presObsSummaryHint">선택</span>
+          </summary>
+          <div class="obs-content">
+            <p class="hint">발표 현장에서 교사가 관찰한 내용을 체크하면 <strong>채점 시 발표력 관련 항목에 반영</strong>됩니다.</p>
+            <div class="pres-obs-box" id="presObsBox"></div>
+            <textarea id="presMemo" style="margin-top:7px; min-height:46px; resize:vertical;"
+              placeholder="기타 발표 관찰 메모 (예: '질문에 논리적으로 답변', '시간 초과 1분' 등)"></textarea>
+          </div>
+        </details>
+
+        <details class="obs-details">
+          <summary class="obs-summary">
+            🤝 협업 능력 체크리스트
+            <span class="obs-summary-hint" id="collabObsSummaryHint">선택 — 모둠/협업 활동 시</span>
+          </summary>
+          <div class="obs-content">
+            <p class="hint">학생 결과물만으로는 판단하기 어려운 협업 능력을 교사가 체크하면 <strong>채점 시 협업 관련 항목에 반영</strong>됩니다.</p>
+            <div class="pres-obs-box" id="collabObsBox"></div>
+            <textarea id="collabMemo" style="margin-top:7px; min-height:46px; resize:vertical;"
+              placeholder="기타 협업 관찰 메모 (예: '모둠 내 자료 조사 역할 주도', '의견 조율 적극 기여' 등)"></textarea>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -836,7 +904,7 @@
         <li>AI 제공자(Claude·ChatGPT·Gemini)를 선택하고 <strong>API 키</strong>와 <strong>과목명</strong>을 입력하세요</li>
         <li>채점 기준(루브릭)을 입력하거나 파일로 불러오세요<br>
             <span style="font-size:.76rem; color:#94a3b8;">관찰 모드에선 선택 사항 · 채점 모드에선 권장</span></li>
-        <li>발표/PPT 유형이면 <strong>발표 관찰 체크리스트</strong>를 입력하세요 <span style="font-size:.76rem; color:#94a3b8;">(채점 시 반영)</span></li>
+        <li>필요 시 <strong>발표 관찰 · 협업 능력 체크리스트</strong>를 펼쳐서 입력하세요 <span style="font-size:.76rem; color:#94a3b8;">(채점 시 해당 루브릭 항목에 반영)</span></li>
         <li>학생 수행평가 파일(PDF·DOCX·PPTX·JPG·PNG)을 업로드하세요 <span style="font-size:.76rem; color:#94a3b8;">(파일명 규칙은 아래 참고)</span></li>
         <li><strong>수행평가 분석 시작</strong> 버튼 클릭</li>
         <li>결과 카드의 <strong>📋 복사</strong> 클릭 →
@@ -952,69 +1020,105 @@ function switchMode(mode) {
   });
 }
 
-/* ── 발표 관찰 체크리스트 ── */
+/* ── 관찰 체크리스트 (발표·협업 공통) ── */
 const PRES_OBS_ITEMS = [
   { key: 'attitude', label: '발표 태도·자세' },
   { key: 'voice',    label: '목소리·전달력' },
   { key: 'time',     label: '시간 관리' },
   { key: 'qna',      label: '질의응답' },
 ];
+const COLLAB_OBS_ITEMS = [
+  { key: 'role',  label: '역할 분담·책임 수행' },
+  { key: 'comm',  label: '모둠원과의 의사소통' },
+  { key: 'confl', label: '갈등 조정·의사결정 기여' },
+  { key: 'init',  label: '주도성·적극성' },
+];
 const PRES_LEVELS = ['상', '중', '하'];
 
-function renderPresObsBox() {
-  const box = document.getElementById('presObsBox');
+/* 공통 렌더/토글/복원/조회 — prefix·boxId·items 만 바꿔서 재사용 */
+function _renderObsBox(boxId, items, prefix) {
+  const box = document.getElementById(boxId);
   if (!box) return;
-  box.innerHTML = PRES_OBS_ITEMS.map(item => `
+  box.innerHTML = items.map(item => `
     <div class="pres-obs-row">
       <div class="pres-obs-label">${item.label}</div>
       <div class="pres-obs-buttons" data-item="${item.key}">
         ${PRES_LEVELS.map(lv => `
           <button type="button" class="pres-obs-btn" data-level="${lv}"
-                  onclick="togglePresObs('${item.key}','${lv}')">${lv}</button>
+                  onclick="toggleObs('${prefix}','${item.key}','${lv}')">${lv}</button>
         `).join('')}
       </div>
     </div>
   `).join('');
-  _restorePresObs();
+  _restoreObsGeneric(boxId, items, prefix);
 }
-function togglePresObs(itemKey, level) {
-  const btns = document.querySelectorAll(`[data-item="${itemKey}"] .pres-obs-btn`);
-  const current = localStorage.getItem('app_presObs_' + itemKey);
+
+function toggleObs(prefix, itemKey, level) {
+  const boxId = prefix === 'pres' ? 'presObsBox' : 'collabObsBox';
+  const btns = document.querySelectorAll(`#${boxId} [data-item="${itemKey}"] .pres-obs-btn`);
+  const storageKey = `app_${prefix}Obs_${itemKey}`;
+  const current = localStorage.getItem(storageKey);
   if (current === level) {
-    localStorage.removeItem('app_presObs_' + itemKey);
+    localStorage.removeItem(storageKey);
     btns.forEach(b => b.classList.remove('checked'));
   } else {
-    localStorage.setItem('app_presObs_' + itemKey, level);
+    localStorage.setItem(storageKey, level);
     btns.forEach(b => b.classList.toggle('checked', b.dataset.level === level));
   }
+  _updateObsSummaryHints();
 }
-function _restorePresObs() {
-  PRES_OBS_ITEMS.forEach(item => {
-    const v = localStorage.getItem('app_presObs_' + item.key);
+
+function _restoreObsGeneric(boxId, items, prefix) {
+  items.forEach(item => {
+    const v = localStorage.getItem(`app_${prefix}Obs_${item.key}`);
     if (!v) return;
-    document.querySelectorAll(`[data-item="${item.key}"] .pres-obs-btn`)
+    document.querySelectorAll(`#${boxId} [data-item="${item.key}"] .pres-obs-btn`)
       .forEach(b => b.classList.toggle('checked', b.dataset.level === v));
   });
-  const memo = localStorage.getItem('app_presMemo');
-  const memoEl = document.getElementById('presMemo');
+  const memoId  = prefix === 'pres' ? 'presMemo' : 'collabMemo';
+  const memoKey = `app_${prefix}Memo`;
+  const memo = localStorage.getItem(memoKey);
+  const memoEl = document.getElementById(memoId);
   if (memo && memoEl) memoEl.value = memo;
 }
-function getPresObs() {
+
+function _getObs(prefix, items) {
   const obs = {};
-  PRES_OBS_ITEMS.forEach(item => {
-    const v = localStorage.getItem('app_presObs_' + item.key);
+  items.forEach(item => {
+    const v = localStorage.getItem(`app_${prefix}Obs_${item.key}`);
     if (v) obs[item.key] = v;
   });
-  const memo = (document.getElementById('presMemo')?.value || '').trim();
+  const memoId = prefix === 'pres' ? 'presMemo' : 'collabMemo';
+  const memo = (document.getElementById(memoId)?.value || '').trim();
   if (memo) obs.memo = memo;
   return Object.keys(obs).length ? obs : null;
 }
-/* 활동 유형에 "발표"가 포함됐으면 체크리스트 표시 */
-function updatePresObsVisibility() {
-  const actType = getActType();
-  const show = /발표|PPT/.test(actType);
-  const wrap = document.getElementById('presObsWrap');
-  if (wrap) wrap.style.display = show ? 'block' : 'none';
+
+/* 공개 API */
+function renderPresObsBox()   { _renderObsBox('presObsBox',   PRES_OBS_ITEMS,   'pres');   _updateObsSummaryHints(); }
+function renderCollabObsBox() { _renderObsBox('collabObsBox', COLLAB_OBS_ITEMS, 'collab'); _updateObsSummaryHints(); }
+function getPresObs()   { return _getObs('pres',   PRES_OBS_ITEMS); }
+function getCollabObs() { return _getObs('collab', COLLAB_OBS_ITEMS); }
+
+/* 아코디언 summary에 "입력됨" 배지 표시 — 요약 보기만으로 상태 파악 */
+function _updateObsSummaryHints() {
+  const pairs = [
+    { hintId: 'presObsSummaryHint',   prefix: 'pres',   items: PRES_OBS_ITEMS,   memoId: 'presMemo',   defaultHint: '선택' },
+    { hintId: 'collabObsSummaryHint', prefix: 'collab', items: COLLAB_OBS_ITEMS, memoId: 'collabMemo', defaultHint: '선택 — 모둠/협업 활동 시' },
+  ];
+  pairs.forEach(p => {
+    const hintEl = document.getElementById(p.hintId);
+    if (!hintEl) return;
+    const filled = p.items.filter(it => localStorage.getItem(`app_${p.prefix}Obs_${it.key}`)).length;
+    const memoFilled = (document.getElementById(p.memoId)?.value || '').trim().length > 0;
+    if (filled || memoFilled) {
+      hintEl.className = 'obs-summary-filled';
+      hintEl.textContent = `✓ ${filled}개 항목${memoFilled ? ' + 메모' : ''}`;
+    } else {
+      hintEl.className = 'obs-summary-hint';
+      hintEl.textContent = p.defaultHint;
+    }
+  });
 }
 
 /* ── API 제공자 ── */
@@ -1184,7 +1288,6 @@ function toggleAct(event, label) {
   cb.checked = !cb.checked;
   label.classList.toggle('checked', cb.checked);
   _saveActTypes();
-  updatePresObsVisibility();
 }
 function _saveActTypes() {
   const vals = [...document.querySelectorAll('#activityTypeGroup input:checked')]
@@ -1268,16 +1371,21 @@ function _restoreFields() {
   // 제공자 · API 키 · 모델 복원
   switchProvider(localStorage.getItem('app_provider') || 'anthropic');
 
-  // 발표 관찰 체크리스트 렌더
+  // 관찰 체크리스트 렌더 (발표 · 협업)
   renderPresObsBox();
+  renderCollabObsBox();
 
   // 텍스트 필드 복원
   _restoreFields();
-  updatePresObsVisibility();
 
-  // 발표 메모 자동 저장
+  // 관찰 메모 자동 저장
   document.getElementById('presMemo')?.addEventListener('input', e => {
     localStorage.setItem('app_presMemo', e.target.value);
+    _updateObsSummaryHints();
+  });
+  document.getElementById('collabMemo')?.addEventListener('input', e => {
+    localStorage.setItem('app_collabMemo', e.target.value);
+    _updateObsSummaryHints();
   });
 
   // 드래그 앤 드롭
@@ -1964,7 +2072,7 @@ ${extractedContent}
 }
 
 /* ── 채점 프롬프트 ── */
-function buildGradingPrompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, presObs, isGroup, groupTitle, hasPresentation }) {
+function buildGradingPrompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, presObs, collabObs, isGroup, groupTitle }) {
   const system = `당신은 학생 수행평가를 채점 기준표(루브릭)에 따라 정확하고 공정하게 평가하는 채점 전문 AI입니다.
 각 평가 항목별로 점수·등급·구체적 근거를 제시하고, 반드시 지정된 JSON 형식으로만 출력합니다.
 학생 이름은 출력에 포함하지 않습니다.`;
@@ -1973,14 +2081,25 @@ function buildGradingPrompt({ subject, actType, topic, rubric, achieveLevel, ext
     ? `\n## 채점 기준 (루브릭)\n${rubric}\n`
     : `\n## 채점 기준\n(루브릭 미입력 — 아래 일반 기준으로 평가)\n- 내용의 정확성 (30점)\n- 논리적 구성 (25점)\n- 창의적 사고 (20점)\n- 자료 활용 및 표현 (15점)\n- 완성도 (10점)\n`;
 
-  const presSection = (hasPresentation && presObs)
+  const presSection = presObs
     ? `\n## 발표 관찰 (교사가 현장에서 기록)
 ${presObs.attitude ? `- 발표 태도·자세: ${presObs.attitude}` : ''}
 ${presObs.voice    ? `- 목소리·전달력: ${presObs.voice}` : ''}
 ${presObs.time     ? `- 시간 관리: ${presObs.time}` : ''}
 ${presObs.qna      ? `- 질의응답: ${presObs.qna}` : ''}
 ${presObs.memo     ? `- 기타 메모: ${presObs.memo}` : ''}
-※ 위 관찰 내용을 채점에 반드시 반영하세요 (특히 발표력·전달력 관련 항목).
+※ 위 관찰 내용을 루브릭 내 발표력·전달력 관련 항목의 "점수"에 반영 (별도 항목·가산점 금지).
+`
+    : '';
+
+  const collabSection = collabObs
+    ? `\n## 협업 관찰 (교사가 현장에서 기록)
+${collabObs.role  ? `- 역할 분담·책임 수행: ${collabObs.role}` : ''}
+${collabObs.comm  ? `- 모둠원과의 의사소통: ${collabObs.comm}` : ''}
+${collabObs.confl ? `- 갈등 조정·의사결정 기여: ${collabObs.confl}` : ''}
+${collabObs.init  ? `- 주도성·적극성: ${collabObs.init}` : ''}
+${collabObs.memo  ? `- 기타 메모: ${collabObs.memo}` : ''}
+※ 위 관찰 내용을 루브릭 내 협업 능력·참여도·역할 수행 관련 항목의 "점수"에 반영 (별도 항목·가산점 금지).
 `
     : '';
 
@@ -1990,7 +2109,7 @@ ${presObs.memo     ? `- 기타 메모: ${presObs.memo}` : ''}
 
   const prompt = `## 수업 정보
 과목: ${subject}
-${actSection}${topicSection}${rubricSection}${presSection}
+${actSection}${topicSection}${rubricSection}${presSection}${collabSection}
 ## 1단계 추출 결과${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}
 
 ${extractedContent}
@@ -2315,9 +2434,9 @@ async function startAnalysis() {
   const doObs   = mode === 'observation' || mode === 'both';
   const doGrade = mode === 'grading'     || mode === 'both';
 
-  // 발표 관찰 메모 (발표/PPT 유형이고 채점 모드일 때 사용)
-  const hasPresentation = /발표|PPT/.test(actType);
-  const presObs = (hasPresentation && doGrade) ? getPresObs() : null;
+  // 현장 관찰 메모 (채점 모드일 때만 AI에 전달 — 입력되어 있으면 활용)
+  const presObs   = doGrade ? getPresObs()   : null;
+  const collabObs = doGrade ? getCollabObs() : null;
 
   // 채점 모드인데 루브릭이 없으면 경고
   if (doGrade && !rubric) {
@@ -2475,7 +2594,7 @@ async function startAnalysis() {
           <div style="font-size:.82rem; color:#64748b; padding:10px;">⏳ 루브릭 기준으로 채점 중입니다...</div>`;
         const gradingPrompts = buildGradingPrompt({
           subject, actType, topic, rubric, achieveLevel, extractedContent,
-          presObs, isGroup, groupTitle: isGroup ? title : '', hasPresentation
+          presObs, collabObs, isGroup, groupTitle: isGroup ? title : ''
         });
         let gradeText = '';
         await new Promise(resolve => {
