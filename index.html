@@ -1386,7 +1386,7 @@ function _updateLevelSummaryHint() {
   const v = getAchieveLevel();
   if (v) {
     hintEl.className = 'obs-summary-filled';
-    hintEl.textContent = `✓ 등급 ${v} 선택됨`;
+    hintEl.textContent = `✓ ${v}`;
   } else {
     hintEl.className = 'obs-summary-hint';
     hintEl.textContent = '선택 — 관찰 내용에만 적용';
