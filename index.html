@@ -429,6 +429,190 @@
       background: #1e40af; color: #fff;
       border-color: #1e40af;
     }
+
+    /* ── 실행 모드 토글 ── */
+    .mode-group {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .mode-option {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 11px 13px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff; cursor: pointer;
+      transition: all .16s; user-select: none;
+    }
+    .mode-option:hover { border-color: #93c5fd; background: #eff6ff; }
+    .mode-option input[type="radio"] { display: none; }
+    .mode-option.checked {
+      border-color: #1e40af; background: linear-gradient(135deg, #eff6ff 0%, #ede9fe 100%);
+      box-shadow: 0 2px 6px rgba(30,64,175,.12);
+    }
+    .mode-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+    .mode-text-wrap { flex: 1; min-width: 0; }
+    .mode-title {
+      font-size: .87rem; font-weight: 700; color: #1e293b;
+      display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
+    }
+    .mode-desc { font-size: .72rem; color: #64748b; line-height: 1.45; }
+    .rec-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff; font-size: .63rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 99px;
+    }
+
+    /* ── 발표 관찰 체크리스트 ── */
+    .pres-obs-box {
+      padding: 10px 12px;
+      background: #fefce8; border: 1.5px solid #fde68a;
+      border-radius: 9px;
+    }
+    .pres-obs-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px dashed #fde68a;
+    }
+    .pres-obs-row:last-of-type { border-bottom: none; }
+    .pres-obs-label {
+      flex: 1; font-size: .78rem; font-weight: 600; color: #713f12;
+    }
+    .pres-obs-buttons {
+      display: inline-flex; gap: 4px;
+    }
+    .pres-obs-btn {
+      min-width: 32px;
+      padding: 3px 10px;
+      border: 1.5px solid #fcd34d;
+      border-radius: 99px;
+      background: #fff; color: #92400e;
+      font-size: .74rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .pres-obs-btn:hover { background: #fef3c7; }
+    .pres-obs-btn.checked {
+      background: #d97706; color: #fff; border-color: #d97706;
+    }
+
+    /* ── 결과 카드 탭 ── */
+    .rc-tabs {
+      display: flex; background: #f8fafc;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding: 0 8px;
+    }
+    .rc-tab {
+      padding: 10px 16px;
+      background: transparent; border: none; cursor: pointer;
+      font-family: inherit; font-size: .82rem; font-weight: 600;
+      color: #64748b;
+      border-bottom: 2.5px solid transparent;
+      transition: all .16s;
+      margin-bottom: -1.5px;
+    }
+    .rc-tab:hover { color: #1e40af; }
+    .rc-tab.active {
+      color: #1e40af; border-bottom-color: #1e40af;
+      background: #fff;
+    }
+    .rc-panel { display: none; }
+    .rc-panel.active { display: block; }
+
+    /* ── 채점 결과 카드 ── */
+    .grade-summary {
+      background: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%);
+      border: 1.5px solid #bbf7d0;
+      border-radius: 11px;
+      padding: 14px 16px;
+      margin-bottom: 13px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .grade-total-num {
+      font-size: 2.1rem; font-weight: 800;
+      color: #15803d; line-height: 1;
+      min-width: 100px;
+    }
+    .grade-total-num .max { font-size: .45em; color: #94a3b8; font-weight: 600; }
+    .grade-bar-wrap { flex: 1; }
+    .grade-bar {
+      height: 8px; background: #e2e8f0; border-radius: 4px;
+      overflow: hidden; margin-bottom: 4px;
+    }
+    .grade-bar > div {
+      height: 100%;
+      background: linear-gradient(90deg, #15803d, #22c55e);
+      border-radius: 4px; transition: width .5s ease;
+    }
+    .grade-grade-tag {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 99px;
+      font-size: .75rem; font-weight: 700;
+      background: #dcfce7; color: #15803d;
+    }
+    .criterion {
+      padding: 10px 12px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 9px;
+      margin-bottom: 8px;
+    }
+    .crit-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 5px;
+    }
+    .crit-name {
+      flex: 1;
+      font-size: .84rem; font-weight: 700; color: #1e293b;
+    }
+    .crit-score {
+      font-size: .83rem; font-weight: 700; color: #1e40af;
+      white-space: nowrap;
+    }
+    .crit-score .max { font-size: .75em; color: #94a3b8; font-weight: 600; }
+    .crit-grade {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 1px 7px;
+      border-radius: 99px;
+      font-size: .67rem; font-weight: 700;
+      background: #eff6ff; color: #1e40af;
+    }
+    .crit-bar {
+      height: 4px; background: #e2e8f0; border-radius: 2px;
+      overflow: hidden; margin-bottom: 6px;
+    }
+    .crit-bar > div {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      border-radius: 2px;
+    }
+    .crit-reason {
+      font-size: .78rem; color: #475569; line-height: 1.6;
+    }
+    .grade-comment {
+      margin-top: 10px;
+      padding: 11px 13px;
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: 9px;
+      font-size: .82rem; color: #1e40af; line-height: 1.7;
+    }
+    .grade-comment strong { display: block; margin-bottom: 4px; font-size: .78rem; }
+
+    /* ── 작은 개선: 카드 그림자·여백 ── */
+    .card { box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 12px rgba(15,23,42,.04); }
+    .result-card { box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 4px 14px rgba(15,23,42,.05); }
+
+    /* ── 섹션 소제목 ── */
+    .sub-title {
+      font-size: .78rem; font-weight: 700; color: #475569;
+      margin: 12px 0 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sub-title::before {
+      content: ''; display: inline-block; width: 3px; height: 12px;
+      background: #1e40af; border-radius: 2px;
+    }
   </style>
 </head>
 <body>
@@ -452,6 +636,37 @@
 
   <!-- ══════════ SIDEBAR ══════════ -->
   <div class="sidebar">
+
+    <!-- 실행 모드 -->
+    <div class="card">
+      <div class="card-title">🎯 실행 모드</div>
+      <div class="mode-group" id="modeGroup">
+        <label class="mode-option checked" onclick="switchMode('observation')">
+          <input type="radio" name="mode" value="observation" checked>
+          <span class="mode-icon">📋</span>
+          <div class="mode-text-wrap">
+            <div class="mode-title">관찰 내용 생성</div>
+            <div class="mode-desc">생기부용 "~함." 관찰 문장 3버전 자동 생성</div>
+          </div>
+        </label>
+        <label class="mode-option" onclick="switchMode('grading')">
+          <input type="radio" name="mode" value="grading">
+          <span class="mode-icon">📊</span>
+          <div class="mode-text-wrap">
+            <div class="mode-title">루브릭 채점</div>
+            <div class="mode-desc">채점 기준별 점수 · 등급 · 근거 자동 산출</div>
+          </div>
+        </label>
+        <label class="mode-option" onclick="switchMode('both')">
+          <input type="radio" name="mode" value="both">
+          <span class="mode-icon">✨</span>
+          <div class="mode-text-wrap">
+            <div class="mode-title">동시 실행 <span class="rec-badge">추천</span></div>
+            <div class="mode-desc">관찰 + 채점 한 번에 — 파싱 1회로 비용 절감</div>
+          </div>
+        </label>
+      </div>
+    </div>
 
     <!-- API / 모델 설정 -->
     <div class="card">
@@ -534,6 +749,17 @@
         </div>
         <p class="hint">해당 학생의 수행평가 결과물 등급입니다. 등급에 따라 요약 표현 방식이 달라집니다.</p>
       </div>
+
+      <!-- 발표 관찰 체크리스트 — 발표/PPT 유형일 때만 표시 -->
+      <div id="presObsWrap" style="display:none; margin-top:13px;">
+        <div class="sub-title">🎤 발표 관찰 체크리스트</div>
+        <p class="hint" style="margin-bottom:7px;">발표 현장에서 교사가 관찰한 내용을 체크하면 채점·관찰 결과에 반영됩니다 (선택 사항).</p>
+        <div class="pres-obs-box" id="presObsBox">
+          <!-- JS로 렌더링 -->
+        </div>
+        <textarea id="presMemo" style="margin-top:7px; min-height:46px; resize:vertical;"
+          placeholder="기타 발표 관찰 메모 (예: '질문에 논리적으로 답변', '시간 초과 1분' 등)"></textarea>
+      </div>
     </div>
 
     <!-- 채점 기준 -->
@@ -566,7 +792,7 @@
     </div>
 
     <button class="btn btn-primary" id="analyzeBtn" onclick="startAnalysis()" disabled>
-      ✨ 수업 관찰 내용 생성
+      ✨ 수행평가 분석 시작
     </button>
 
   </div>
@@ -593,16 +819,29 @@
     <div class="card" id="guideCard">
       <div class="card-title">💡 사용 방법</div>
       <ol style="padding-left:18px; font-size:.84rem; line-height:2.1; color:#475569;">
+        <li><strong>실행 모드</strong>를 선택하세요 — 관찰 내용 생성 · 루브릭 채점 · 동시 실행(추천)</li>
         <li>AI 제공자(Claude·ChatGPT·Gemini)를 선택하고 <strong>API 키</strong>와 <strong>과목명</strong>을 입력하세요</li>
         <li>채점 기준(루브릭)을 입력하거나 파일로 불러오세요<br>
-            <span style="font-size:.76rem; color:#94a3b8;">없어도 되지만, 있을수록 정확도 향상</span></li>
+            <span style="font-size:.76rem; color:#94a3b8;">관찰 모드에선 선택 사항 · 채점 모드에선 권장</span></li>
+        <li>발표/PPT 유형이면 <strong>발표 관찰 체크리스트</strong>를 입력하세요 <span style="font-size:.76rem; color:#94a3b8;">(채점 시 반영)</span></li>
         <li>학생 수행평가 파일(PDF·DOCX·PPTX·JPG·PNG)을 업로드하세요 <span style="font-size:.76rem; color:#94a3b8;">(파일명 규칙은 아래 참고)</span></li>
-        <li><strong>수업 관찰 내용 생성</strong> 버튼 클릭</li>
+        <li><strong>수행평가 분석 시작</strong> 버튼 클릭</li>
         <li>결과 카드의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
-               target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>
-            수업 관찰 내용란에 붙여넣기 → <strong>✨ 생성하기</strong></li>
+               target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>에 붙여넣기
+            · 채점 결과는 <strong>💾 CSV 저장</strong>으로 성적부 활용</li>
       </ol>
+
+      <div class="divider"></div>
+
+      <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:10px 12px; font-size:.78rem; color:#4338ca; line-height:1.75; margin-bottom:10px;">
+        <strong>🎯 실행 모드 안내</strong>
+        <ul style="margin:6px 0 0 18px; padding:0;">
+          <li><strong>관찰 내용 생성</strong> — 생기부 세특용 "~함." 문장 3버전 생성</li>
+          <li><strong>루브릭 채점</strong> — 평가 항목별 점수·등급·근거 + CSV 저장</li>
+          <li><strong>동시 실행 (추천)</strong> — 파일 파싱·추출 1회로 관찰+채점 동시 처리 (비용 최소화)</li>
+        </ul>
+      </div>
 
       <div class="divider"></div>
 
@@ -644,14 +883,8 @@
     <!-- 결과 영역 -->
     <div id="resultsContainer"></div>
 
-    <!-- 전체 내보내기 -->
-    <div id="globalAct" style="display:none;" class="card">
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="exportAll()">💾 전체 텍스트 저장</button>
-        <button class="btn btn-ghost btn-sm" onclick="clearAll()">🗑 결과 초기화</button>
-        <button class="btn btn-ghost btn-sm" onclick="toggleHistory()">📚 이전 이력</button>
-      </div>
-    </div>
+    <!-- 전체 내보내기 (JS로 동적 갱신) -->
+    <div id="globalAct" style="display:none;" class="card"></div>
 
     <!-- 분석 이력 -->
     <div class="card" id="historySection" style="display:none;">
@@ -688,10 +921,88 @@ const CONFIG = {
   RUBRIC_OCR_MAX_TOKENS: 2000,
 };
 
-let files       = [];
-let results     = {};   // key -> string[]  (버전 배열)
-let _isAnalyzing = false;
-let _abortCtrl   = null;
+let files          = [];
+let results        = {};   // studentKey -> string[]  (관찰 3버전)
+let gradingResults = {};   // studentKey -> { criteria, 총점, 만점, 추천_등급, 총평 }
+let _isAnalyzing   = false;
+let _abortCtrl     = null;
+
+/* ── 실행 모드 ── */
+function getMode() { return localStorage.getItem('app_mode') || 'observation'; }
+function switchMode(mode) {
+  localStorage.setItem('app_mode', mode);
+  document.querySelectorAll('#modeGroup .mode-option').forEach(l => {
+    const inp = l.querySelector('input');
+    const active = inp.value === mode;
+    l.classList.toggle('checked', active);
+    inp.checked = active;
+  });
+}
+
+/* ── 발표 관찰 체크리스트 ── */
+const PRES_OBS_ITEMS = [
+  { key: 'attitude', label: '발표 태도·자세' },
+  { key: 'voice',    label: '목소리·전달력' },
+  { key: 'time',     label: '시간 관리' },
+  { key: 'qna',      label: '질의응답' },
+];
+const PRES_LEVELS = ['상', '중', '하'];
+
+function renderPresObsBox() {
+  const box = document.getElementById('presObsBox');
+  if (!box) return;
+  box.innerHTML = PRES_OBS_ITEMS.map(item => `
+    <div class="pres-obs-row">
+      <div class="pres-obs-label">${item.label}</div>
+      <div class="pres-obs-buttons" data-item="${item.key}">
+        ${PRES_LEVELS.map(lv => `
+          <button type="button" class="pres-obs-btn" data-level="${lv}"
+                  onclick="togglePresObs('${item.key}','${lv}')">${lv}</button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+  _restorePresObs();
+}
+function togglePresObs(itemKey, level) {
+  const btns = document.querySelectorAll(`[data-item="${itemKey}"] .pres-obs-btn`);
+  const current = localStorage.getItem('app_presObs_' + itemKey);
+  if (current === level) {
+    localStorage.removeItem('app_presObs_' + itemKey);
+    btns.forEach(b => b.classList.remove('checked'));
+  } else {
+    localStorage.setItem('app_presObs_' + itemKey, level);
+    btns.forEach(b => b.classList.toggle('checked', b.dataset.level === level));
+  }
+}
+function _restorePresObs() {
+  PRES_OBS_ITEMS.forEach(item => {
+    const v = localStorage.getItem('app_presObs_' + item.key);
+    if (!v) return;
+    document.querySelectorAll(`[data-item="${item.key}"] .pres-obs-btn`)
+      .forEach(b => b.classList.toggle('checked', b.dataset.level === v));
+  });
+  const memo = localStorage.getItem('app_presMemo');
+  const memoEl = document.getElementById('presMemo');
+  if (memo && memoEl) memoEl.value = memo;
+}
+function getPresObs() {
+  const obs = {};
+  PRES_OBS_ITEMS.forEach(item => {
+    const v = localStorage.getItem('app_presObs_' + item.key);
+    if (v) obs[item.key] = v;
+  });
+  const memo = (document.getElementById('presMemo')?.value || '').trim();
+  if (memo) obs.memo = memo;
+  return Object.keys(obs).length ? obs : null;
+}
+/* 활동 유형에 "발표"가 포함됐으면 체크리스트 표시 */
+function updatePresObsVisibility() {
+  const actType = getActType();
+  const show = /발표|PPT/.test(actType);
+  const wrap = document.getElementById('presObsWrap');
+  if (wrap) wrap.style.display = show ? 'block' : 'none';
+}
 
 /* ── API 제공자 ── */
 // 모델 목록 — 공식 문서 기준 최신 3종 (2026년 4월 기준)
@@ -860,6 +1171,7 @@ function toggleAct(event, label) {
   cb.checked = !cb.checked;
   label.classList.toggle('checked', cb.checked);
   _saveActTypes();
+  updatePresObsVisibility();
 }
 function _saveActTypes() {
   const vals = [...document.querySelectorAll('#activityTypeGroup input:checked')]
@@ -937,11 +1249,23 @@ function _restoreFields() {
 
 /* ── Init ── */
 (async function () {
+  // 실행 모드 복원
+  switchMode(getMode());
+
   // 제공자 · API 키 · 모델 복원
   switchProvider(localStorage.getItem('app_provider') || 'anthropic');
 
+  // 발표 관찰 체크리스트 렌더
+  renderPresObsBox();
+
   // 텍스트 필드 복원
   _restoreFields();
+  updatePresObsVisibility();
+
+  // 발표 메모 자동 저장
+  document.getElementById('presMemo')?.addEventListener('input', e => {
+    localStorage.setItem('app_presMemo', e.target.value);
+  });
 
   // 드래그 앤 드롭
   const dz = document.getElementById('dropZone');
@@ -1625,6 +1949,211 @@ ${extractedContent}
   return { system, prompt };
 }
 
+/* ── 채점 프롬프트 ── */
+function buildGradingPrompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, presObs, isGroup, groupTitle, hasPresentation }) {
+  const system = `당신은 학생 수행평가를 채점 기준표(루브릭)에 따라 정확하고 공정하게 평가하는 채점 전문 AI입니다.
+각 평가 항목별로 점수·등급·구체적 근거를 제시하고, 반드시 지정된 JSON 형식으로만 출력합니다.
+학생 이름은 출력에 포함하지 않습니다.`;
+
+  const rubricSection = rubric
+    ? `\n## 채점 기준 (루브릭)\n${rubric}\n`
+    : `\n## 채점 기준\n(루브릭 미입력 — 아래 일반 기준으로 평가)\n- 내용의 정확성 (30점)\n- 논리적 구성 (25점)\n- 창의적 사고 (20점)\n- 자료 활용 및 표현 (15점)\n- 완성도 (10점)\n`;
+
+  const presSection = (hasPresentation && presObs)
+    ? `\n## 발표 관찰 (교사가 현장에서 기록)
+${presObs.attitude ? `- 발표 태도·자세: ${presObs.attitude}` : ''}
+${presObs.voice    ? `- 목소리·전달력: ${presObs.voice}` : ''}
+${presObs.time     ? `- 시간 관리: ${presObs.time}` : ''}
+${presObs.qna      ? `- 질의응답: ${presObs.qna}` : ''}
+${presObs.memo     ? `- 기타 메모: ${presObs.memo}` : ''}
+※ 위 관찰 내용을 채점에 반드시 반영하세요 (특히 발표력·전달력 관련 항목).
+`
+    : '';
+
+  const actSection   = actType ? `수행평가 유형: ${actType}\n` : '';
+  const topicSection = topic   ? `단원/주제: ${topic}\n` : '';
+  const levelSection = achieveLevel ? `참고 성취 수준(교사 판단): ${achieveLevel}\n` : '';
+
+  const prompt = `## 수업 정보
+과목: ${subject}
+${actSection}${topicSection}${levelSection}${rubricSection}${presSection}
+## 1단계 추출 결과${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}
+
+${extractedContent}
+
+---
+
+위 정보를 바탕으로 루브릭의 각 평가 항목에 대해 채점하세요.
+
+【필수 규칙】
+1. 반드시 아래 JSON 형식으로만 출력 (설명·인사말·마크다운·코드블록 금지)
+2. 루브릭에 명시된 항목·배점을 그대로 따름 (명시 안되어 있으면 위 일반 기준 적용)
+3. "근거"는 결과물의 구체적 내용을 인용하거나 발췌
+4. 발표 관찰 내용이 있으면 해당 항목에 적극 반영
+5. 학생 이름 절대 포함 금지
+6. 배점 총합은 100점 기준
+
+<<<JSON_START>>>
+{
+  "criteria": [
+    { "항목": "평가 항목명", "배점": 30, "점수": 27, "등급": "A", "근거": "결과물의 구체적 내용 인용 또는 발췌..." },
+    { "항목": "...", "배점": 25, "점수": 22, "등급": "A", "근거": "..." }
+  ],
+  "총점": 88,
+  "만점": 100,
+  "추천_등급": "A",
+  "총평": "학생 결과물의 전반적 평가·강점·개선점 2~3문장"
+}
+<<<JSON_END>>>`;
+
+  return { system, prompt };
+}
+
+/* ── 채점 결과 JSON 파싱 ── */
+function parseGradingResult(text) {
+  let jsonStr = '';
+  const tagged = text.match(/<<<JSON_START>>>([\s\S]*?)<<<JSON_END>>>/);
+  if (tagged) {
+    jsonStr = tagged[1].trim();
+  } else {
+    const first = text.indexOf('{');
+    const last  = text.lastIndexOf('}');
+    if (first >= 0 && last > first) jsonStr = text.slice(first, last + 1);
+  }
+  if (!jsonStr) return null;
+  // 코드 블록 제거
+  jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    // 트레일링 콤마 제거 시도
+    try {
+      return JSON.parse(jsonStr.replace(/,\s*([}\]])/g, '$1'));
+    } catch (e) {
+      console.error('채점 JSON 파싱 실패:', e, jsonStr);
+      return null;
+    }
+  }
+}
+
+/* ── 채점 결과 카드 렌더 ── */
+function renderGradingCard(grading, studentName) {
+  if (!grading || !Array.isArray(grading.criteria)) {
+    return `<p style="color:#b91c1c; font-size:.85rem; padding:10px;">❌ 채점 결과를 파싱할 수 없습니다. AI가 JSON 형식으로 응답하지 않았을 수 있습니다.</p>`;
+  }
+  const total = Number(grading.총점) || 0;
+  const max   = Number(grading.만점) || 100;
+  const pct   = Math.min(100, Math.round((total / Math.max(max, 1)) * 100));
+  const grade = grading.추천_등급 || '';
+  const gradeColors = {
+    A: '#15803d', B: '#1d4ed8', C: '#b45309', D: '#c2410c', E: '#b91c1c',
+  };
+  const gradeColor = gradeColors[grade] || '#475569';
+
+  const criteriaHTML = grading.criteria.map(c => {
+    const cScore = Number(c.점수) || 0;
+    const cMax   = Number(c.배점) || 1;
+    const cPct   = Math.min(100, Math.round((cScore / cMax) * 100));
+    return `
+      <div class="criterion">
+        <div class="crit-head">
+          <span class="crit-name">${esc(c.항목 || '')}</span>
+          <span class="crit-score">${cScore}<span class="max">/${cMax}점</span>${c.등급 ? `<span class="crit-grade">${esc(c.등급)}</span>` : ''}</span>
+        </div>
+        <div class="crit-bar"><div style="width:${cPct}%"></div></div>
+        <div class="crit-reason">${esc(c.근거 || '')}</div>
+      </div>`;
+  }).join('');
+
+  const safeKey = studentName.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,"\\'");
+
+  return `
+    <div class="grade-summary">
+      <div class="grade-total-num" style="color:${gradeColor};">
+        ${total}<span class="max">/${max}</span>
+      </div>
+      <div class="grade-bar-wrap">
+        <div class="grade-bar"><div style="width:${pct}%; background:linear-gradient(90deg, ${gradeColor}, ${gradeColor}cc);"></div></div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${grade ? `<span class="grade-grade-tag" style="background:${gradeColor}20; color:${gradeColor};">등급 ${esc(grade)}</span>` : ''}
+          <span style="font-size:.78rem; color:#64748b;">${pct}% 달성</span>
+        </div>
+      </div>
+    </div>
+    <div>${criteriaHTML}</div>
+    ${grading.총평 ? `<div class="grade-comment"><strong>📝 총평</strong>${esc(grading.총평)}</div>` : ''}
+    <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+      <button class="btn btn-copy btn-sm" onclick="copyGrading('${safeKey}')">📋 채점 결과 복사</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadGradingOne('${safeKey}')">💾 CSV 저장</button>
+    </div>
+  `;
+}
+
+/* ── 채점 결과 복사/저장 ── */
+function copyGrading(name) {
+  const g = gradingResults[name];
+  if (!g) { toast('채점 결과가 없습니다', 'error'); return; }
+  const lines = [];
+  lines.push(`[채점 결과 — ${name}]`);
+  lines.push(`총점: ${g.총점 ?? '?'} / ${g.만점 ?? 100}  (등급: ${g.추천_등급 ?? '-'})`);
+  lines.push('');
+  (g.criteria || []).forEach(c => {
+    lines.push(`· ${c.항목}: ${c.점수}/${c.배점}점${c.등급 ? ` (${c.등급})` : ''}`);
+    if (c.근거) lines.push(`  근거: ${c.근거}`);
+  });
+  if (g.총평) { lines.push(''); lines.push(`총평: ${g.총평}`); }
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => toast('채점 결과를 복사했습니다', 'success'))
+    .catch(() => toast('복사 실패', 'error'));
+}
+
+function _csvEscape(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function downloadGradingOne(name) {
+  const g = gradingResults[name];
+  if (!g) { toast('채점 결과가 없습니다', 'error'); return; }
+  const rows = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+  (g.criteria || []).forEach(c => {
+    rows.push([name, c.항목, c.배점, c.점수, c.등급, c.근거]);
+  });
+  rows.push([name, '총점', g.만점, g.총점, g.추천_등급, g.총평]);
+  const csv = '\uFEFF' + rows.map(r => r.map(_csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `${name}_채점결과.csv`,
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function exportGradingAll() {
+  const entries = Object.entries(gradingResults);
+  if (!entries.length) { toast('채점 결과가 없습니다', 'info'); return; }
+  // 통합 CSV (항목명은 학생마다 다를 수 있으므로 long format)
+  const rows = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+  entries.forEach(([name, g]) => {
+    (g.criteria || []).forEach(c => rows.push([name, c.항목, c.배점, c.점수, c.등급, c.근거]));
+    rows.push([name, '총점', g.만점, g.총점, g.추천_등급, g.총평 || '']);
+  });
+  const date = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').slice(0,-1);
+  const csv = '\uFEFF' + rows.map(r => r.map(_csvEscape).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `채점결과_전체_${date}.csv`,
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ── 결과 카드 탭 전환 ── */
+function switchResultTab(cid, tab) {
+  const card = document.getElementById(cid);
+  if (!card) return;
+  card.querySelectorAll('.rc-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  card.querySelectorAll('.rc-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+}
+
 /* ── Main ── */
 async function startAnalysis() {
   const apiKey   = document.getElementById('apiKey').value.trim();
@@ -1646,10 +2175,25 @@ async function startAnalysis() {
   localStorage.setItem(meta.storageKey, apiKey);
   localStorage.setItem(meta.modelKey,   model);
 
-  results = {};
-  _isAnalyzing = true;
-  _abortCtrl = new AbortController();
-  const signal = _abortCtrl.signal;
+  // 실행 모드
+  const mode = getMode();
+  const doObs   = mode === 'observation' || mode === 'both';
+  const doGrade = mode === 'grading'     || mode === 'both';
+
+  // 발표 관찰 메모 (발표/PPT 유형이고 채점 모드일 때 사용)
+  const hasPresentation = /발표|PPT/.test(actType);
+  const presObs = (hasPresentation && doGrade) ? getPresObs() : null;
+
+  // 채점 모드인데 루브릭이 없으면 경고
+  if (doGrade && !rubric) {
+    if (!confirm('채점 기준(루브릭)이 입력되지 않았습니다.\n일반 학업 기준(내용/논리/창의/자료/완성도 100점 만점)으로 채점됩니다.\n계속할까요?')) return;
+  }
+
+  results        = {};
+  gradingResults = {};
+  _isAnalyzing   = true;
+  _abortCtrl     = new AbortController();
+  const signal   = _abortCtrl.signal;
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = false;
   btn.textContent = '⏹ 분석 중 — 클릭하여 취소';
@@ -1689,7 +2233,7 @@ async function startAnalysis() {
 
   // Placeholder cards (모두)
   tasks.forEach(t => {
-    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.files[0], t.displayName, t.isGroup, t.files.length));
+    container.insertAdjacentHTML('beforeend', placeholderCard(t.cid, t.files[0], t.displayName, t.isGroup, t.files.length, mode));
   });
 
   for (const task of tasks) {
@@ -1700,10 +2244,10 @@ async function startAnalysis() {
     const { files: taskFiles, studentName, displayName, title, isGroup, cid } = task;
 
     setStatus(cid, 'running', taskFiles.length > 1 ? `파일 ${taskFiles.length}개 읽는 중...` : '파일 읽는 중...');
-    setProg(cid, 10);
+    setProg(cid, 5);
 
     try {
-      // 다중 파일 통합 파싱 — 텍스트는 구분자로 합치고, 이미지는 누적
+      // 다중 파일 통합 파싱
       const textParts = [];
       const allImages = [];
       let totalImageBytes = 0;
@@ -1711,15 +2255,12 @@ async function startAnalysis() {
         const f = taskFiles[i];
         setStatus(cid, 'running', `파일 읽는 중 (${i + 1}/${taskFiles.length}): ${f.name}`);
         const parsed = await parseFile(f);
-        const header = taskFiles.length > 1
-          ? `===== [파일 ${i + 1}: ${f.name}] =====\n`
-          : '';
+        const header = taskFiles.length > 1 ? `===== [파일 ${i + 1}: ${f.name}] =====\n` : '';
         textParts.push(header + (parsed.text || ''));
         if (Array.isArray(parsed.imageData)) {
           for (const img of parsed.imageData) {
             totalImageBytes += (img.base64 || '').length;
             if (totalImageBytes > CONFIG.PDF_MAX_BODY_BYTES) {
-              console.warn(`[통합 분석] 이미지 총 크기 제한 초과 — 일부 이미지는 제외됩니다`);
               toast('여러 파일의 이미지 총 크기가 커서 일부는 분석에서 제외됩니다', 'info');
               break;
             }
@@ -1731,7 +2272,7 @@ async function startAnalysis() {
       const imageData     = allImages.length ? allImages : null;
       const hasImages     = Array.isArray(imageData) && imageData.length > 0;
 
-      // Step 1: 핵심 내용 추출
+      // Step 1: 핵심 내용 추출 (관찰·채점 공통)
       setStatus(cid, 'running', hasImages ? '1단계: 이미지 분석 중...' : '1단계: 핵심 내용 추출 중...');
       setProg(cid, 20);
 
@@ -1747,54 +2288,113 @@ async function startAnalysis() {
         throw new Error('1단계 추출 실패: ' + err.message);
       }
 
-      setProg(cid, 50);
-      setStatus(cid, 'running', '2단계: 요약 문장 생성 중...');
+      // 결과 카드 본체 초기화 (탭/패널 구조)
+      document.getElementById(`${cid}-body`).innerHTML = renderResultShell(cid, mode);
 
-      document.getElementById(`${cid}-body`).innerHTML = `
-        <div class="prog-bar"><div class="prog-fill" id="${cid}-prog" style="width:50%"></div></div>
-        <div id="${cid}-stream"></div>`;
-      const streamEl = document.getElementById(`${cid}-stream`);
-      let fullText = '';
-
-      const step2 = buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, lengthOpt, isGroup, groupTitle: isGroup ? title : '' });
-
-      await new Promise(resolve => {
-        callAI({
-          ...step2, apiKey, model, maxTokens: CONFIG.STEP2_MAX_TOKENS, signal,
-          onChunk(chunk) {
-            fullText += chunk;
-            setProg(cid, Math.min(95, 50 + fullText.length / 20));
-            const display = fullText.replace(/<<<버전(\d+)>>>/g, '\n\n■ 버전 $1\n');
-            streamEl.innerHTML = renderObs(display, true);
-          },
-          onDone() {
-            const versions = parseVersions(fullText);
-            results[studentName] = versions;
-            setStatus(cid, 'done', `완료 — ${versions.length}가지 버전`);
-            setProg(cid, 100);
-            document.getElementById(`${cid}-prog`)?.closest('.prog-bar')?.remove();
-            streamEl.innerHTML = renderVersionCards(versions, parseInt(lengthOpt) || 200, studentName);
-            _saveHistory({ id: Date.now(), subject, actType, achieveLevel, fileName: displayName, lengthOpt, versions }).catch(() => {});
-            resolve();
-          },
-          onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`),
-          onError(msg) {
-            if (signal.aborted) { setStatus(cid, 'error', '취소됨'); resolve(); return; }
-            document.getElementById(`${cid}-body`).innerHTML =
-              `<p style="color:#b91c1c;font-size:.83rem;">❌ 오류: ${esc(msg)}</p>`;
-            setStatus(cid, 'error', '오류 발생');
-            resolve();
-          }
+      // ── Step 2a: 관찰 내용 생성 ──────────
+      if (doObs && !signal.aborted) {
+        setProg(cid, 35);
+        setStatus(cid, 'running', '2단계: 관찰 문장 생성 중...');
+        const obsPanel = document.getElementById(`${cid}-obsPanel`);
+        obsPanel.innerHTML = `
+          <div class="prog-bar" style="margin-bottom:10px;"><div class="prog-fill" id="${cid}-obsProg" style="width:10%"></div></div>
+          <div id="${cid}-obsStream"></div>`;
+        const streamEl = document.getElementById(`${cid}-obsStream`);
+        let fullText = '';
+        const step2 = buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, lengthOpt, isGroup, groupTitle: isGroup ? title : '' });
+        await new Promise(resolve => {
+          callAI({
+            ...step2, apiKey, model, maxTokens: CONFIG.STEP2_MAX_TOKENS, signal,
+            onChunk(chunk) {
+              fullText += chunk;
+              const pct = Math.min(95, 10 + fullText.length / 20);
+              const prog = document.getElementById(`${cid}-obsProg`);
+              if (prog) prog.style.width = pct + '%';
+              const display = fullText.replace(/<<<버전(\d+)>>>/g, '\n\n■ 버전 $1\n');
+              streamEl.innerHTML = renderObs(display, true);
+            },
+            onDone() {
+              const versions = parseVersions(fullText);
+              results[studentName] = versions;
+              document.getElementById(`${cid}-obsProg`)?.closest('.prog-bar')?.remove();
+              streamEl.innerHTML = renderVersionCards(versions, parseInt(lengthOpt) || 200, studentName);
+              resolve();
+            },
+            onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`),
+            onError(msg) {
+              if (signal.aborted) { resolve(); return; }
+              streamEl.innerHTML = `<p style="color:#b91c1c;font-size:.83rem;">❌ 관찰 생성 오류: ${esc(msg)}</p>`;
+              resolve();
+            }
+          });
         });
-      });
+      }
+
+      // ── Step 2b: 채점 ────────────────────
+      if (doGrade && !signal.aborted) {
+        setProg(cid, doObs ? 70 : 50);
+        setStatus(cid, 'running', `${doObs ? '3단계' : '2단계'}: 채점 중...`);
+        const gradePanel = document.getElementById(`${cid}-gradePanel`);
+        gradePanel.innerHTML = `
+          <div class="prog-bar" style="margin-bottom:10px;"><div class="prog-fill" id="${cid}-gradeProg" style="width:10%"></div></div>
+          <div style="font-size:.82rem; color:#64748b; padding:10px;">⏳ 루브릭 기준으로 채점 중입니다...</div>`;
+        const gradingPrompts = buildGradingPrompt({
+          subject, actType, topic, rubric, achieveLevel, extractedContent,
+          presObs, isGroup, groupTitle: isGroup ? title : '', hasPresentation
+        });
+        let gradeText = '';
+        await new Promise(resolve => {
+          callAI({
+            ...gradingPrompts, apiKey, model, maxTokens: CONFIG.STEP2_MAX_TOKENS, signal,
+            onChunk(chunk) {
+              gradeText += chunk;
+              const pct = Math.min(95, 10 + gradeText.length / 20);
+              const prog = document.getElementById(`${cid}-gradeProg`);
+              if (prog) prog.style.width = pct + '%';
+            },
+            onDone() {
+              const grading = parseGradingResult(gradeText);
+              if (grading) {
+                gradingResults[studentName] = grading;
+                gradePanel.innerHTML = renderGradingCard(grading, studentName);
+              } else {
+                gradePanel.innerHTML = `<p style="color:#b91c1c; font-size:.83rem; padding:10px;">❌ 채점 결과 파싱 실패. 원본:<br><pre style="white-space:pre-wrap; font-size:.75rem; background:#fef2f2; padding:8px; border-radius:6px; margin-top:6px;">${esc(gradeText.slice(0, 500))}</pre></p>`;
+              }
+              resolve();
+            },
+            onRetry: s => setStatus(cid, 'running', `한도 초과 — ${s}초 후 자동 재시도`),
+            onError(msg) {
+              if (signal.aborted) { resolve(); return; }
+              gradePanel.innerHTML = `<p style="color:#b91c1c;font-size:.83rem; padding:10px;">❌ 채점 오류: ${esc(msg)}</p>`;
+              resolve();
+            }
+          });
+        });
+      }
+
+      // 태스크 완료
+      setProg(cid, 100);
+      const obsOK   = doObs   && results[studentName];
+      const gradeOK = doGrade && gradingResults[studentName];
+      const parts = [];
+      if (obsOK)   parts.push(`관찰 ${results[studentName].length}개`);
+      if (gradeOK) parts.push(`채점 ${gradingResults[studentName].총점 ?? '?'}/${gradingResults[studentName].만점 ?? 100}점`);
+      setStatus(cid, 'done', `완료 — ${parts.join(' · ') || '처리됨'}`);
+      // 이력 저장
+      _saveHistory({
+        id: Date.now(), subject, actType, achieveLevel,
+        fileName: displayName, lengthOpt,
+        versions: results[studentName] || null,
+        grading:  gradingResults[studentName] || null,
+      }).catch(() => {});
 
     } catch (err) {
       document.getElementById(`${cid}-body`).innerHTML =
-        `<p style="color:#b91c1c;font-size:.83rem;">❌ ${esc(err.message)}</p>`;
+        `<p style="color:#b91c1c;font-size:.83rem; padding:10px;">❌ ${esc(err.message)}</p>`;
       setStatus(cid, 'error', '오류 발생');
     }
 
-    // 연속 요청 시 Rate Limit 방지용 딜레이 (마지막 task 제외, 취소 시 스킵)
+    // 연속 요청 시 Rate Limit 방지용 딜레이
     if (task !== tasks[tasks.length - 1] && !signal.aborted) {
       await new Promise(r => setTimeout(r, CONFIG.TASK_DELAY_MS));
     }
@@ -1804,13 +2404,63 @@ async function startAnalysis() {
   _isAnalyzing = false;
   _abortCtrl = null;
   btn.disabled = false;
-  btn.textContent = '✨ 수업 관찰 내용 생성';
+  btn.textContent = '✨ 수행평가 분석 시작';
   btn.onclick = startAnalysis;
   syncBtn();
-  if (Object.keys(results).length) {
+  const obsN   = Object.keys(results).length;
+  const gradeN = Object.keys(gradingResults).length;
+  if (obsN || gradeN) {
     document.getElementById('globalAct').style.display = 'block';
-    toast(`${Object.keys(results).length}명 생성 완료!`, 'success');
+    updateGlobalActButtons(mode);
+    const msgs = [];
+    if (obsN)   msgs.push(`관찰 ${obsN}명`);
+    if (gradeN) msgs.push(`채점 ${gradeN}명`);
+    toast(`${msgs.join(' · ')} 완료!`, 'success');
   }
+}
+
+/* ── 결과 카드 셸 (탭/패널) ── */
+function renderResultShell(cid, mode) {
+  if (mode === 'both') {
+    return `
+      <div style="margin:-16px -18px 12px; border-bottom:1.5px solid #e2e8f0;">
+        <div class="rc-tabs">
+          <button class="rc-tab active" data-tab="obs" onclick="switchResultTab('${cid}','obs')">📋 관찰 내용</button>
+          <button class="rc-tab" data-tab="grade" onclick="switchResultTab('${cid}','grade')">📊 채점 결과</button>
+        </div>
+      </div>
+      <div class="rc-panel active" data-panel="obs" id="${cid}-obsPanel">
+        <p style="color:#64748b; font-size:.83rem; padding:10px;">⏳ 대기 중...</p>
+      </div>
+      <div class="rc-panel" data-panel="grade" id="${cid}-gradePanel">
+        <p style="color:#64748b; font-size:.83rem; padding:10px;">⏳ 대기 중...</p>
+      </div>`;
+  }
+  if (mode === 'grading') {
+    return `
+      <div class="rc-panel active" data-panel="grade" id="${cid}-gradePanel">
+        <p style="color:#64748b; font-size:.83rem; padding:10px;">⏳ 대기 중...</p>
+      </div>`;
+  }
+  // observation
+  return `
+    <div class="rc-panel active" data-panel="obs" id="${cid}-obsPanel">
+      <p style="color:#64748b; font-size:.83rem; padding:10px;">⏳ 대기 중...</p>
+    </div>`;
+}
+
+/* ── 전역 내보내기 버튼 업데이트 ── */
+function updateGlobalActButtons(mode) {
+  const el = document.getElementById('globalAct');
+  const obsN   = Object.keys(results).length;
+  const gradeN = Object.keys(gradingResults).length;
+  el.innerHTML = `
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      ${obsN   ? `<button class="btn btn-ghost btn-sm" onclick="exportAll()">💾 관찰 내용 전체 저장 (${obsN}명)</button>` : ''}
+      ${gradeN ? `<button class="btn btn-ghost btn-sm" onclick="exportGradingAll()">📊 채점 결과 CSV 저장 (${gradeN}명)</button>` : ''}
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()">🗑 결과 초기화</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleHistory()">📚 이전 이력</button>
+    </div>`;
 }
 
 /* ── 분석 취소 ── */
@@ -1891,16 +2541,21 @@ function renderObs(text, streaming) {
 }
 
 /* ── Placeholder card ── */
-function placeholderCard(cid, file, name, isGroup, fileCount = 1) {
+function placeholderCard(cid, file, name, isGroup, fileCount = 1, mode = 'observation') {
   const groupTag  = isGroup ? ' <span style="font-size:.68rem;opacity:.75;">(모둠)</span>' : '';
   const mergedTag = fileCount > 1
     ? ` <span style="font-size:.68rem;opacity:.85;background:rgba(255,255,255,.18);padding:1px 6px;border-radius:99px;">🔗 ${fileCount}개 파일 통합</span>`
     : '';
+  const modeTag = {
+    observation: '<span style="font-size:.65rem;opacity:.75;background:rgba(255,255,255,.2);padding:1px 7px;border-radius:99px;">📋 관찰</span>',
+    grading:     '<span style="font-size:.65rem;opacity:.75;background:rgba(255,255,255,.2);padding:1px 7px;border-radius:99px;">📊 채점</span>',
+    both:        '<span style="font-size:.65rem;opacity:.75;background:rgba(255,255,255,.2);padding:1px 7px;border-radius:99px;">✨ 관찰+채점</span>',
+  }[mode] || '';
   return `
   <div class="result-card" id="${cid}" style="margin-bottom:13px;">
     <div class="rc-head">
       <div>
-        <h3>${ficon(file.name)} ${esc(name)}${groupTag}${mergedTag}</h3>
+        <h3>${ficon(file.name)} ${esc(name)}${groupTag}${mergedTag} ${modeTag}</h3>
         <div class="rc-sub" id="${cid}-sub">대기 중...</div>
       </div>
       <span class="badge b-wait" id="${cid}-badge">대기</span>
@@ -1971,7 +2626,8 @@ function exportAll() {
 }
 
 function clearAll() {
-  results = {};
+  results        = {};
+  gradingResults = {};
   document.getElementById('resultsContainer').innerHTML = '';
   document.getElementById('globalAct').style.display = 'none';
   document.getElementById('guideCard').style.display = 'block';
@@ -2013,17 +2669,36 @@ async function loadAndRenderHistory() {
           <button class="btn btn-copy btn-sm" style="margin-top:5px;" onclick='navigator.clipboard.writeText(${JSON.stringify(copyText)}).then(()=>toast("복사됨","success"))'>📋 복사</button>
         </div>`;
       }).join('') : '';
+      const gradingHtml = e.grading ? (() => {
+        const g = e.grading;
+        const crits = Array.isArray(g.criteria) ? g.criteria.map(c =>
+          `<div style="padding:5px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;margin-top:4px;font-size:.76rem;">
+            <strong>${esc(c.항목||'')}</strong> — ${c.점수}/${c.배점}점${c.등급?` (${esc(c.등급)})`:''}
+            ${c.근거?`<div style="color:#64748b;margin-top:2px;">${esc(c.근거)}</div>`:''}
+          </div>`
+        ).join('') : '';
+        return `<div style="margin-top:8px;padding:9px 11px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;">
+          <div style="font-size:.76rem;font-weight:700;color:#15803d;margin-bottom:4px;">📊 채점 결과 — 총점 ${g.총점??'?'}/${g.만점??100} (등급 ${esc(g.추천_등급||'-')})</div>
+          ${crits}
+          ${g.총평?`<div style="font-size:.75rem;color:#475569;margin-top:6px;line-height:1.6;"><strong>총평:</strong> ${esc(g.총평)}</div>`:''}
+        </div>`;
+      })() : '';
+      const badges = [];
+      if (Array.isArray(e.versions)) badges.push(`<span style="background:#dbeafe;color:#1d4ed8;border-radius:99px;padding:1px 7px;font-size:.68rem;font-weight:700;">📋 관찰 ${e.versions.length}</span>`);
+      if (e.grading) badges.push(`<span style="background:#dcfce7;color:#15803d;border-radius:99px;padding:1px 7px;font-size:.68rem;font-weight:700;">📊 ${e.grading.총점??'?'}점</span>`);
       return `<div style="border:1px solid #e2e8f0;border-radius:9px;padding:11px 13px;margin-bottom:9px;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span style="font-size:.73rem;color:#94a3b8;">${dt}</span>
           <span style="font-size:.8rem;font-weight:700;color:#1e293b;">${esc(e.subject||'')}</span>
           ${levelTag}
+          ${badges.join('')}
           <span style="font-size:.75rem;color:#64748b;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(e.fileName||'')}">${esc(e.fileName||'')}</span>
           <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:.7rem;" onclick="deleteHistEntry(${e.id})">🗑</button>
         </div>
         <details style="margin-top:6px;">
-          <summary style="font-size:.76rem;color:#1e40af;cursor:pointer;font-weight:600;user-select:none;">요약 보기 (${Array.isArray(e.versions)?e.versions.length:0}개 버전)</summary>
+          <summary style="font-size:.76rem;color:#1e40af;cursor:pointer;font-weight:600;user-select:none;">자세히 보기</summary>
           ${versionsHtml}
+          ${gradingHtml}
         </details>
       </div>`;
     }).join('');
