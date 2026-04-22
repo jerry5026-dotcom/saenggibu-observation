@@ -812,7 +812,7 @@
     <a class="header-link"
        href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
        target="_blank" rel="noopener">
-      🔗 생기부 작성 도우미 열기
+      🔗 생기부 작성 도우미 Ⅱ 열기
     </a>
   </div>
 </header>
@@ -1070,7 +1070,7 @@
         <li><strong>수행평가 분석 시작</strong> 버튼 클릭</li>
         <li>관찰 내용의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
-               target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>에 붙여넣기
+               target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미 Ⅱ</a>에 붙여넣기
             · 관찰·채점 결과는 <strong>📊 엑셀 저장(.xlsx)</strong></li>
       </ol>
 
@@ -1119,7 +1119,7 @@
 
       <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; font-size:.78rem; color:#1e40af; line-height:1.7;">
         <strong>📌 출력 형식</strong><br>
-        생기부 작성 도우미가 요구하는 <strong>"~함." 종결형 관찰 문장</strong>을 줄바꿈으로 나열합니다.<br>
+        생기부 작성 도우미 Ⅱ가 요구하는 <strong>"~함." 종결형 관찰 문장</strong>을 줄바꿈으로 나열합니다.<br>
         각 문장에 <em>단원명 + 구체적 활동 + 학생의 주장·분석·결론</em>을 압축하여<br>
         도우미가 고품질 생기부 문장을 생성할 수 있도록 최적화합니다.
       </div>
@@ -2235,7 +2235,7 @@ function buildStep2Prompt({ subject, actType, topic, rubric, achieveLevel, extra
 
   const system = `당신은 수행평가 결과물 핵심 내용 요약 전문 AI입니다.
 추출된 핵심 정보를 바탕으로 수행평가 결과물의 내용을 간결하고 정확하게 요약합니다.
-이 요약은 생기부 작성 도우미의 수업 관찰 내용 입력란에 사용됩니다.
+이 요약은 생기부 작성 도우미 Ⅱ의 수업 관찰 내용 입력란에 사용됩니다.
 
 【필수 규칙】
 1. 반드시 "~함." 또는 "~임."으로 문장 종결
@@ -3514,7 +3514,7 @@ function copyVersion(name, idx) {
   // 줄바꿈 없이 문장 이어붙이기
   const text = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0).join(' ');
   navigator.clipboard.writeText(text)
-    .then(() => toast(`버전 ${idx + 1} 복사 완료! 생기부 작성 도우미의 수업 관찰 내용란에 붙여넣으세요.`, 'success'))
+    .then(() => toast(`버전 ${idx + 1} 복사 완료! 생기부 작성 도우미 Ⅱ의 수업 관찰 내용란에 붙여넣으세요.`, 'success'))
     .catch(() => toast('복사 실패 — 브라우저 권한을 확인해주세요', 'error'));
 }
 
