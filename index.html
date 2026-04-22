@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -912,7 +913,7 @@
         <li>결과 카드의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
                target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>에 붙여넣기
-            · 채점 결과는 <strong>💾 CSV 저장</strong>으로 성적부 활용</li>
+            · 관찰·채점 결과는 <strong>📊 엑셀 저장(.xlsx)</strong>으로 성적부 활용</li>
       </ol>
 
       <div class="divider"></div>
@@ -921,7 +922,7 @@
         <strong>🎯 실행 모드 안내</strong>
         <ul style="margin:6px 0 0 18px; padding:0;">
           <li><strong>관찰 내용 생성</strong> — 생기부 세특용 "~함." 문장 3버전 생성</li>
-          <li><strong>루브릭 채점</strong> — 평가 항목별 점수·등급·근거 + CSV 저장</li>
+          <li><strong>루브릭 채점</strong> — 평가 항목별 점수·등급·근거 + 엑셀(.xlsx) 저장</li>
           <li><strong>동시 실행 (추천)</strong> — 파일 파싱·추출 1회로 관찰+채점 동시 처리 (비용 최소화)</li>
         </ul>
       </div>
@@ -1043,7 +1044,7 @@ function _renderObsBox(boxId, items, prefix) {
   if (!box) return;
   box.innerHTML = items.map(item => `
     <div class="pres-obs-row">
-      <div class="pres-obs-label">${item.label}</div>
+      <div class="pres-obs-label" title="${item.label}">${item.label}</div>
       <div class="pres-obs-buttons" data-item="${item.key}">
         ${PRES_LEVELS.map(lv => `
           <button type="button" class="pres-obs-btn" data-level="${lv}"
@@ -2340,7 +2341,7 @@ function renderGradingCard(grading, studentName) {
     ${grading.총평 ? `<div class="grade-comment"><strong>📝 총평</strong>${esc(grading.총평)}</div>` : ''}
     <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
       <button class="btn btn-copy btn-sm" onclick="copyGrading('${safeKey}')">📋 채점 결과 복사</button>
-      <button class="btn btn-ghost btn-sm" onclick="downloadGradingOne('${safeKey}')">💾 CSV 저장</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadGradingOne('${safeKey}')">📊 엑셀 저장</button>
     </div>
   `;
 }
@@ -2363,43 +2364,91 @@ function copyGrading(name) {
     .catch(() => toast('복사 실패', 'error'));
 }
 
-function _csvEscape(v) {
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 function downloadGradingOne(name) {
   const g = gradingResults[name];
   if (!g) { toast('채점 결과가 없습니다', 'error'); return; }
-  const rows = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+  // Sheet 1: 총점 요약
+  const summaryAoa = [
+    ['학생', '총점', '만점', '달성률', '등급', '총평'],
+    [name, Number(g.총점) || 0, Number(g.만점) || 100,
+     (g.만점 > 0 ? Math.round((g.총점 / g.만점) * 100) + '%' : ''),
+     g.추천_등급 || '', g.총평 || '']
+  ];
+  // Sheet 2: 항목별 상세
+  const detailAoa = [['평가 항목', '배점', '점수', '등급', '근거']];
   (g.criteria || []).forEach(c => {
-    rows.push([name, c.항목, c.배점, c.점수, c.등급, c.근거]);
+    detailAoa.push([c.항목, Number(c.배점) || 0, Number(c.점수) || 0, c.등급 || '', c.근거 || '']);
   });
-  rows.push([name, '총점', g.만점, g.총점, g.추천_등급, g.총평]);
-  const csv = '\uFEFF' + rows.map(r => r.map(_csvEscape).join(',')).join('\r\n');
-  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `${name}_채점결과.csv`,
-  });
-  a.click(); URL.revokeObjectURL(a.href);
+  _saveXLSX(`${name}_채점결과.xlsx`, [
+    { name: '총점 요약', aoa: summaryAoa, colWidths: [14, 8, 8, 10, 8, 60] },
+    { name: '항목별 상세', aoa: detailAoa, colWidths: [22, 8, 8, 8, 70] },
+  ]);
 }
+
 function exportGradingAll() {
   const entries = Object.entries(gradingResults);
   if (!entries.length) { toast('채점 결과가 없습니다', 'info'); return; }
-  // 통합 CSV (항목명은 학생마다 다를 수 있으므로 long format)
-  const rows = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+  // Sheet 1: 학생별 총점 요약
+  const summaryAoa = [['학생', '총점', '만점', '달성률', '등급', '총평']];
   entries.forEach(([name, g]) => {
-    (g.criteria || []).forEach(c => rows.push([name, c.항목, c.배점, c.점수, c.등급, c.근거]));
-    rows.push([name, '총점', g.만점, g.총점, g.추천_등급, g.총평 || '']);
+    const pct = g.만점 > 0 ? Math.round((g.총점 / g.만점) * 100) + '%' : '';
+    summaryAoa.push([name, Number(g.총점) || 0, Number(g.만점) || 100, pct, g.추천_등급 || '', g.총평 || '']);
+  });
+  // Sheet 2: 항목별 상세 (long format)
+  const detailAoa = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+  entries.forEach(([name, g]) => {
+    (g.criteria || []).forEach(c => {
+      detailAoa.push([name, c.항목, Number(c.배점) || 0, Number(c.점수) || 0, c.등급 || '', c.근거 || '']);
+    });
   });
   const date = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').slice(0,-1);
-  const csv = '\uFEFF' + rows.map(r => r.map(_csvEscape).join(',')).join('\r\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `채점결과_전체_${date}.csv`,
-  });
-  a.click(); URL.revokeObjectURL(a.href);
+  _saveXLSX(`채점결과_전체_${date}.xlsx`, [
+    { name: '총점 요약', aoa: summaryAoa, colWidths: [14, 8, 8, 10, 8, 60] },
+    { name: '항목별 상세', aoa: detailAoa, colWidths: [14, 22, 8, 8, 8, 70] },
+  ]);
+}
+
+/* 관찰 + 채점 한 엑셀에 통합 저장 (동시 실행 모드에서 유용) */
+function exportCombinedXLSX() {
+  const obsEntries   = Object.entries(results);
+  const gradeEntries = Object.entries(gradingResults);
+  if (!obsEntries.length && !gradeEntries.length) {
+    toast('저장할 결과가 없습니다', 'info'); return;
+  }
+  const sheets = [];
+
+  if (obsEntries.length) {
+    const aoa = [['학생', '버전 1', '버전 2', '버전 3', '글자수 1', '글자수 2', '글자수 3']];
+    obsEntries.forEach(([name, versions]) => {
+      const cleans = (Array.isArray(versions) ? versions : [versions]).slice(0, 3).map(_flattenObsText);
+      const row = [name];
+      for (let i = 0; i < 3; i++) row.push(cleans[i] || '');
+      for (let i = 0; i < 3; i++) row.push(cleans[i] ? cleans[i].length : '');
+      aoa.push(row);
+    });
+    sheets.push({ name: '관찰 내용', aoa, colWidths: [14, 55, 55, 55, 9, 9, 9] });
+  }
+
+  if (gradeEntries.length) {
+    const summaryAoa = [['학생', '총점', '만점', '달성률', '등급', '총평']];
+    gradeEntries.forEach(([name, g]) => {
+      const pct = g.만점 > 0 ? Math.round((g.총점 / g.만점) * 100) + '%' : '';
+      summaryAoa.push([name, Number(g.총점) || 0, Number(g.만점) || 100, pct, g.추천_등급 || '', g.총평 || '']);
+    });
+    sheets.push({ name: '채점 요약', aoa: summaryAoa, colWidths: [14, 8, 8, 10, 8, 60] });
+
+    const detailAoa = [['학생', '평가 항목', '배점', '점수', '등급', '근거']];
+    gradeEntries.forEach(([name, g]) => {
+      (g.criteria || []).forEach(c => {
+        detailAoa.push([name, c.항목, Number(c.배점) || 0, Number(c.점수) || 0, c.등급 || '', c.근거 || '']);
+      });
+    });
+    sheets.push({ name: '채점 상세', aoa: detailAoa, colWidths: [14, 22, 8, 8, 8, 70] });
+  }
+
+  const date = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').slice(0,-1);
+  _saveXLSX(`수행평가분석_전체_${date}.xlsx`, sheets);
+  toast(`${sheets.length}개 시트로 통합 저장했습니다`, 'success');
 }
 
 /* ── 결과 카드 탭 전환 ── */
@@ -2710,10 +2759,12 @@ function updateGlobalActButtons(mode) {
   const el = document.getElementById('globalAct');
   const obsN   = Object.keys(results).length;
   const gradeN = Object.keys(gradingResults).length;
+  const hasBoth = obsN && gradeN;
   el.innerHTML = `
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      ${obsN   ? `<button class="btn btn-ghost btn-sm" onclick="exportAll()">💾 관찰 내용 전체 저장 (${obsN}명)</button>` : ''}
-      ${gradeN ? `<button class="btn btn-ghost btn-sm" onclick="exportGradingAll()">📊 채점 결과 CSV 저장 (${gradeN}명)</button>` : ''}
+      ${hasBoth ? `<button class="btn btn-copy btn-sm" onclick="exportCombinedXLSX()">📊 통합 엑셀 저장 (관찰+채점, ${Math.max(obsN, gradeN)}명)</button>` : ''}
+      ${obsN   ? `<button class="btn btn-ghost btn-sm" onclick="exportAll()">📊 관찰 엑셀 저장 (${obsN}명)</button>` : ''}
+      ${gradeN ? `<button class="btn btn-ghost btn-sm" onclick="exportGradingAll()">📊 채점 엑셀 저장 (${gradeN}명)</button>` : ''}
       <button class="btn btn-ghost btn-sm" onclick="clearAll()">🗑 결과 초기화</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleHistory()">📚 이전 이력</button>
     </div>`;
@@ -2772,7 +2823,7 @@ function renderVersionCards(versions, charLimit, studentName) {
 
   return cards + `
   <div style="display:flex; gap:6px; flex-wrap:wrap; padding-top:4px;">
-    <button class="btn btn-ghost btn-sm" onclick="downloadOne('${en}')">💾 전체 버전 저장</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadOne('${en}')">📊 엑셀 저장</button>
   </div>`;
 }
 
@@ -2852,33 +2903,58 @@ function copyVersion(name, idx) {
     .catch(() => toast('복사 실패 — 브라우저 권한을 확인해주세요', 'error'));
 }
 
+/* ── 엑셀(.xlsx) 저장 공통 헬퍼 ──
+   sheets = [{ name, aoa, colWidths? }] — aoa는 2차원 배열, colWidths는 선택 */
+function _saveXLSX(filename, sheets) {
+  if (typeof XLSX === 'undefined') {
+    toast('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.', 'error');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(s => {
+    const ws = XLSX.utils.aoa_to_sheet(s.aoa);
+    if (Array.isArray(s.colWidths)) ws['!cols'] = s.colWidths.map(w => ({wch: w}));
+    // 시트명 31자 제한 + 금지 문자 치환
+    const safeName = (s.name || '시트').replace(/[\\/?*[\]:]/g, '_').slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, safeName);
+  });
+  XLSX.writeFile(wb, filename);
+}
+
+/* 관찰 내용을 한 줄로 정리 */
+function _flattenObsText(text) {
+  return text.split('\n').map(l => l.trim()).filter(l => l).join(' ');
+}
+
 function downloadOne(name) {
   const v = results[name];
+  if (!v) { toast('관찰 내용이 없습니다', 'error'); return; }
   const versions = Array.isArray(v) ? v : [v];
-  const sep = '='.repeat(40);
-  const text = versions.map((t, i) => `[버전 ${i + 1}]\n${t}`).join(`\n\n${sep}\n\n`);
-  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `${name}_수업관찰내용.txt`
+  const aoa = [['버전', '내용', '글자수']];
+  versions.forEach((t, i) => {
+    const clean = _flattenObsText(t);
+    aoa.push([`버전 ${i + 1}`, clean, clean.length]);
   });
-  a.click(); URL.revokeObjectURL(a.href);
+  _saveXLSX(`${name}_수업관찰내용.xlsx`, [
+    { name: '관찰 내용', aoa, colWidths: [8, 90, 8] }
+  ]);
 }
 
 function exportAll() {
-  const sep = '='.repeat(55);
-  const all = Object.entries(results).map(([n, v]) => {
-    const versions = Array.isArray(v) ? v : [v];
-    const vText = versions.map((t, i) => `[버전 ${i + 1}]\n${t}`).join('\n\n' + '-'.repeat(30) + '\n\n');
-    return `${sep}\n학생: ${n}\n${sep}\n\n${vText}\n`;
-  }).join('\n\n');
-  const date = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').slice(0,-1);
-  const blob = new Blob([all], {type:'text/plain;charset=utf-8'});
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
-    download: `수업관찰내용_전체_${date}.txt`
+  const entries = Object.entries(results);
+  if (!entries.length) { toast('관찰 내용이 없습니다', 'info'); return; }
+  const aoa = [['학생', '버전 1', '버전 2', '버전 3', '글자수 1', '글자수 2', '글자수 3']];
+  entries.forEach(([name, versions]) => {
+    const cleans = (Array.isArray(versions) ? versions : [versions]).slice(0, 3).map(_flattenObsText);
+    const row = [name];
+    for (let i = 0; i < 3; i++) row.push(cleans[i] || '');
+    for (let i = 0; i < 3; i++) row.push(cleans[i] ? cleans[i].length : '');
+    aoa.push(row);
   });
-  a.click(); URL.revokeObjectURL(a.href);
+  const date = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').slice(0,-1);
+  _saveXLSX(`수업관찰내용_전체_${date}.xlsx`, [
+    { name: '관찰 내용', aoa, colWidths: [14, 55, 55, 55, 9, 9, 9] }
+  ]);
 }
 
 function clearAll() {
