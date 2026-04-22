@@ -356,6 +356,8 @@
       display: inline-flex; align-items: center; gap: 4px;
       padding: 2px 8px; border-radius: 99px;
       font-size: .7rem; font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .b-wait    { background:#fef9c3; color:#854d0e; }
     .b-running { background:#dbeafe; color:#1d4ed8; }
@@ -1071,7 +1073,7 @@
         <li>관찰 내용의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
                target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>에 붙여넣기
-            · 관찰·채점 결과는 <strong>📊 엑셀 저장(.xlsx)</strong>으로 성적부 활용</li>
+            · 관찰·채점 결과는 <strong>📊 엑셀 저장(.xlsx)</strong></li>
       </ol>
 
       <div class="divider"></div>
@@ -1655,11 +1657,10 @@ function syncBtn() {
 function saveSettings() {
   const k = document.getElementById('apiKey').value.trim();
   const m = document.getElementById('modelSelect').value;
-  if (!k) { toast('API 키를 입력해주세요', 'error'); return; }
   const meta = PROVIDER_META[getProvider()];
-  localStorage.setItem(meta.storageKey, k);
+  localStorage.setItem(meta.storageKey, k);  // 빈 문자열도 허용 — 키 삭제 용도로 활용
   localStorage.setItem(meta.modelKey,   m);
-  toast('저장되었습니다', 'success');
+  toast(k ? '저장되었습니다' : '저장되었습니다 (API 키 삭제)', 'success');
   syncBtn();
 }
 
@@ -3290,7 +3291,6 @@ function renderPromptCopyCard(cid, studentName, promptText, hasImages, flags) {
         <a class="pc-ai-link pc-ai-chatgpt" href="https://chat.openai.com" target="_blank" rel="noopener">💚 ChatGPT 열기</a>
         <a class="pc-ai-link pc-ai-claude" href="https://claude.ai" target="_blank" rel="noopener">💙 Claude 열기</a>
         <a class="pc-ai-link pc-ai-gemini" href="https://gemini.google.com" target="_blank" rel="noopener">✨ Gemini 열기</a>
-        <a class="pc-ai-link pc-ai-clova" href="https://clova-x.naver.com" target="_blank" rel="noopener">🟢 CLOVA X</a>
       </div>
       ${imageWarn}
     </div>
