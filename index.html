@@ -747,7 +747,12 @@
           <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="D">D</label>
           <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="E">E</label>
         </div>
-        <p class="hint">해당 학생의 수행평가 결과물 등급입니다. 등급에 따라 요약 표현 방식이 달라집니다.</p>
+        <div style="margin-top:6px; padding:7px 10px; background:#f1f5f9; border-left:3px solid #1e40af; border-radius:6px; font-size:.72rem; color:#475569; line-height:1.55;">
+          <strong style="color:#1e40af;">💡 어디에 영향을 주나요?</strong><br>
+          <strong>관찰 내용 생성 모드</strong>에만 적용되어 <u>문장의 표현 톤</u>을 조절합니다.<br>
+          · A: 심층·독창·탁월함이 드러나도록 &nbsp; · C: 핵심 내용을 균형 있게 &nbsp; · E: 사실 기반으로 미흡함도 포함<br>
+          <span style="color:#64748b;">채점 모드에서는 편향 방지를 위해 AI에 전달되지 않습니다 (루브릭만으로 순수 채점).</span>
+        </div>
       </div>
 
       <!-- 발표 관찰 체크리스트 — 발표/PPT 유형일 때만 표시 -->
@@ -1012,21 +1017,21 @@ function updatePresObsVisibility() {
 const PROVIDER_MODELS = {
   anthropic: [
     // 모두 유료 (console.anthropic.com)
-    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 — 균형 · 권장 · 유료 ($3/$15)' },
-    { value: 'claude-opus-4-7',   label: 'Claude Opus 4.7 — 최신 최고품질 · 유료 ($5/$25)' },
-    { value: 'claude-haiku-4-5',  label: 'Claude Haiku 4.5 — 빠름 저렴 · 유료 ($1/$5)' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6 — 균형 · 권장 · 유료' },
+    { value: 'claude-opus-4-7',   label: 'Claude Opus 4.7 — 최신 최고품질 · 유료' },
+    { value: 'claude-haiku-4-5',  label: 'Claude Haiku 4.5 — 빠름 저렴 · 유료' },
   ],
   openai: [
     // 모두 유료 (platform.openai.com) — GPT-5.4 계열 (2026.03 출시)
-    { value: 'gpt-5.4-mini', label: 'GPT-5.4 mini — 균형 · 권장 · 유료 ($0.75/$4.50)' },
-    { value: 'gpt-5.4',      label: 'GPT-5.4 — 최신 최고품질 · 유료 ($2.50/$15)' },
-    { value: 'gpt-5.4-nano', label: 'GPT-5.4 nano — 빠름 저렴 · 유료 ($0.20/$1.25)' },
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4 mini — 균형 · 권장 · 유료' },
+    { value: 'gpt-5.4',      label: 'GPT-5.4 — 최신 최고품질 · 유료' },
+    { value: 'gpt-5.4-nano', label: 'GPT-5.4 nano — 빠름 저렴 · 유료' },
   ],
   gemini: [
     // Flash 계열은 무료 (감소된 쿼터) · Pro는 2026.04부터 유료 전용 (aistudio.google.com)
-    { value: 'gemini-3-flash-preview',       label: 'Gemini 3 Flash — 균형 · 권장 · 무료 (축소 쿼터)' },
-    { value: 'gemini-3.1-pro-preview',       label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료 ($2/$12)' },
-    { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite — 빠름 저렴 · 무료 (축소 쿼터)' },
+    { value: 'gemini-3-flash-preview',        label: 'Gemini 3 Flash — 균형 · 권장 · 무료' },
+    { value: 'gemini-3.1-pro-preview',        label: 'Gemini 3.1 Pro — 최신 최고품질 · 유료' },
+    { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite — 빠름 저렴 · 무료' },
   ]
 };
 
@@ -1973,11 +1978,11 @@ ${presObs.memo     ? `- 기타 메모: ${presObs.memo}` : ''}
 
   const actSection   = actType ? `수행평가 유형: ${actType}\n` : '';
   const topicSection = topic   ? `단원/주제: ${topic}\n` : '';
-  const levelSection = achieveLevel ? `참고 성취 수준(교사 판단): ${achieveLevel}\n` : '';
+  // ※ 채점 모드에서는 수행평가 등급을 AI에 전달하지 않음 (편향 방지 — 순수 루브릭 기반 채점)
 
   const prompt = `## 수업 정보
 과목: ${subject}
-${actSection}${topicSection}${levelSection}${rubricSection}${presSection}
+${actSection}${topicSection}${rubricSection}${presSection}
 ## 1단계 추출 결과${isGroup ? ` (모둠 과제: ${groupTitle})` : ''}
 
 ${extractedContent}
