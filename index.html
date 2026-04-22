@@ -792,20 +792,28 @@
       </div>
 
       <div style="margin-top:10px;">
-        <label class="fl">수행평가 등급 <span style="font-weight:400;color:#94a3b8;">(선택 — 다시 클릭하면 해제)</span></label>
-        <div class="act-cb-group" id="achieveLevelGroup">
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="A">A</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="B">B</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="C">C</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="D">D</label>
-          <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="E">E</label>
-        </div>
-        <div style="margin-top:6px; padding:7px 10px; background:#f1f5f9; border-left:3px solid #1e40af; border-radius:6px; font-size:.72rem; color:#475569; line-height:1.55;">
-          <strong style="color:#1e40af;">💡 어디에 영향을 주나요?</strong><br>
-          <strong>관찰 내용 생성 모드</strong>에만 적용되어 <u>문장의 표현 톤</u>을 조절합니다.<br>
-          · A: 심층·독창·탁월함이 드러나도록 &nbsp; · C: 핵심 내용을 균형 있게 &nbsp; · E: 사실 기반으로 미흡함도 포함<br>
-          <span style="color:#64748b;">채점 모드에서는 편향 방지를 위해 AI에 전달되지 않습니다 (루브릭만으로 순수 채점).</span>
-        </div>
+        <details class="obs-details">
+          <summary class="obs-summary">
+            🏅 수행평가 등급
+            <span class="obs-summary-hint" id="levelSummaryHint">선택 — 관찰 내용에만 적용</span>
+          </summary>
+          <div class="obs-content">
+            <p class="hint">해당 버튼을 다시 클릭하면 해제됩니다.</p>
+            <div class="act-cb-group" id="achieveLevelGroup">
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="A">A</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="B">B</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="C">C</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="D">D</label>
+              <label class="act-cb" onclick="toggleLevel(event, this)"><input type="radio" name="achieveLevel" value="E">E</label>
+            </div>
+            <div style="margin-top:6px; padding:7px 10px; background:#f1f5f9; border-left:3px solid #1e40af; border-radius:6px; font-size:.72rem; color:#475569; line-height:1.55;">
+              <strong style="color:#1e40af;">💡 어디에 영향을 주나요?</strong><br>
+              <strong>관찰 내용 생성 모드</strong>에만 적용되어 <u>문장의 표현 톤</u>을 조절합니다.<br>
+              · A: 심층·독창·탁월함이 드러나도록 &nbsp; · C: 핵심 내용을 균형 있게 &nbsp; · E: 사실 기반으로 미흡함도 포함<br>
+              <span style="color:#64748b;">채점 모드에서는 편향 방지를 위해 AI에 전달되지 않습니다 (루브릭만으로 순수 채점).</span>
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- 현장 관찰 체크리스트 (발표·협업) — 항상 표시, 아코디언 -->
@@ -1325,6 +1333,7 @@ function toggleLevel(event, label) {
     label.classList.add('checked');
   }
   localStorage.setItem('app_achieveLevel', wasChecked ? '' : label.querySelector('input').value);
+  _updateLevelSummaryHint();
 }
 function getAchieveLevel() {
   const checked = document.querySelector('#achieveLevelGroup input:checked');
@@ -1332,11 +1341,26 @@ function getAchieveLevel() {
 }
 function _restoreAchieveLevel() {
   const v = localStorage.getItem('app_achieveLevel');
-  if (!v) return;
-  document.querySelectorAll('#achieveLevelGroup .act-cb').forEach(label => {
-    const cb = label.querySelector('input');
-    if (cb.value === v) { cb.checked = true; label.classList.add('checked'); }
-  });
+  if (v) {
+    document.querySelectorAll('#achieveLevelGroup .act-cb').forEach(label => {
+      const cb = label.querySelector('input');
+      if (cb.value === v) { cb.checked = true; label.classList.add('checked'); }
+    });
+  }
+  _updateLevelSummaryHint();
+}
+/* 수행평가 등급 아코디언 요약에 선택 상태 배지 표시 */
+function _updateLevelSummaryHint() {
+  const hintEl = document.getElementById('levelSummaryHint');
+  if (!hintEl) return;
+  const v = getAchieveLevel();
+  if (v) {
+    hintEl.className = 'obs-summary-filled';
+    hintEl.textContent = `✓ 등급 ${v} 선택됨`;
+  } else {
+    hintEl.className = 'obs-summary-hint';
+    hintEl.textContent = '선택 — 관찰 내용에만 적용';
+  }
 }
 
 /* ── localStorage 자동 저장 헬퍼 ── */
