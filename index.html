@@ -780,14 +780,22 @@
 
       <label class="fl">채점 기준 직접 입력 <span style="font-weight:400;color:#94a3b8;">(또는 파일 업로드)</span></label>
       <textarea id="rubric" style="flex:1; min-height:160px;"
-        placeholder="채점 기준이 없어도 분석 가능합니다.
-입력 시 더 정확한 관찰 내용이 생성됩니다.
+        placeholder="채점 기준이 없어도 관찰 내용은 생성됩니다.
+채점 모드에선 입력 권장.
 
-예시:
-[내용의 정확성] 개념을 올바르게 이해·적용
-[논리적 구성] 주장-근거 구조가 명확함
-[창의적 사고] 독창적 시각 또는 해결책 제시
-[자료 활용] 적절한 근거 자료 인용"></textarea>
+[등급별 점수 지정 예시]
+[내용의 정확성] A 20점 / B 17점 / C 14점 / D 11점 / E 8점
+  — 개념 이해·적용의 정확성
+[논리적 구성] A 20 / B 17 / C 14 / D 11 / E 8
+  — 주장-근거 구조의 명확성
+[창의적 사고] 20-17-14-11-8
+  — 독창적 시각 또는 해결책 제시
+
+※ 위처럼 등급별 고정 점수를 쓰면 AI가 그 값만 사용합니다
+  (중간 점수 19, 18, 16 등은 나오지 않음)"></textarea>
+      <p class="hint" style="margin-top:5px;">
+        💡 채점 모드 팁: <strong>"A 20점 B 17점 C 14점 D 11점 E 8점"</strong> 형태로 등급별 점수를 명시하면 AI가 그 값만 사용합니다. 중간 값(19·18점 등)은 자동으로 가까운 허용 값으로 보정됩니다.
+      </p>
 
       <div style="margin-top:9px;">
         <label class="fl">추가 메모 <span style="font-weight:400;color:#94a3b8;">(선택 — 학급 전체에 해당하는 특이사항 등)</span></label>
@@ -2002,6 +2010,22 @@ ${extractedContent}
 7. ★ "총점" 필드 = criteria 배열의 모든 "점수" 값의 합과 정확히 일치해야 함 ★
 8. 루브릭 배점이 5×20=100 이면 만점은 반드시 100 (110, 120 금지)
 
+【★★ 점수 부여 규칙 — 매우 중요 ★★】
+루브릭을 꼼꼼히 읽고 각 항목의 "등급별 점수표"를 먼저 파악하세요.
+
+■ 루브릭에 등급별 고정 점수가 명시된 경우
+  (예: "A: 20점, B: 17점, C: 14점, D: 11점, E: 8점" 또는 "20-17-14-11-8")
+  → 반드시 그 점수 중 하나만 선택
+  → 19점, 18점, 16점, 15점 등 중간값 절대 금지
+  → 먼저 학생이 어느 등급에 해당하는지 판단 → 해당 등급의 "고정 점수"를 그대로 "점수"에 입력
+  → 등급 애매하면 보수적으로 한 단계 아래 등급 선택
+
+■ 루브릭에 배점만 있고 세부 등급 점수가 없는 경우
+  → 0~배점 범위의 적절한 정수 사용 가능
+
+■ 각 항목의 "등급" 필드(A/B/C/D/E)는 해당 항목의 점수 수준에 반드시 부합해야 함
+  (예: 20점 배점에서 14점을 주면 등급은 "C", 17점이면 "B")
+
 예시: 루브릭이 "5개 항목 × 20점 = 100점" 형식이면 아래 JSON이 정확한 출력 형태:
 
 <<<JSON_START>>>
@@ -2025,8 +2049,60 @@ ${extractedContent}
   return { system, prompt };
 }
 
+/* ── 루브릭 텍스트에서 "등급별 고정 점수 패턴" 추출 ──
+   지원 패턴:
+   · "A 20점 B 17점 C 14점 D 11점 E 8점"
+   · "A: 20, B: 17, C: 14, D: 11, E: 8"
+   · "20-17-14-11-8" (하이픈 구분, 3개 이상 값)
+   · "20·17·14·11·8" (중점 구분)
+   · "20, 17, 14, 11, 8" (콤마 구분, 같은 줄)
+   루브릭에 여러 패턴이 있으면 가장 많이 반복되는 값 집합을 채택
+*/
+function extractAllowedScores(rubric) {
+  if (!rubric || typeof rubric !== 'string') return [];
+  const candidates = [];
+
+  // 패턴 1: A~E에 점수가 각각 연결 (예: "A 20점 B 17점 ...")
+  const pattern1 = /[A-E]\s*[:.:]?\s*(\d{1,3})\s*점?/gi;
+  const matches1 = Array.from(rubric.matchAll(pattern1)).map(m => Number(m[1])).filter(n => n > 0 && n <= 100);
+  if (matches1.length >= 3) candidates.push(matches1);
+
+  // 패턴 2: 하이픈/중점/콤마 구분 숫자 시퀀스 (3개 이상)
+  const lines = rubric.split('\n');
+  for (const line of lines) {
+    const seq = line.match(/(\d{1,3})\s*[\-·∙•,\/]\s*(\d{1,3})\s*[\-·∙•,\/]\s*(\d{1,3})(?:\s*[\-·∙•,\/]\s*(\d{1,3}))?(?:\s*[\-·∙•,\/]\s*(\d{1,3}))?/);
+    if (seq) {
+      const nums = seq.slice(1).filter(x => x !== undefined).map(Number).filter(n => n > 0 && n <= 100);
+      if (nums.length >= 3 && nums.every((v, i, a) => i === 0 || v < a[i - 1])) { // 내림차순이면 등급 점수로 간주
+        candidates.push(nums);
+      }
+    }
+  }
+
+  if (!candidates.length) return [];
+  // 가장 자주 등장하는 집합을 채택 (첫 번째로 간주)
+  return candidates[0];
+}
+
+/* 점수를 허용 집합의 가장 가까운 값으로 스냅 (배점 초과 금지, 동점이면 더 낮은 쪽) */
+function snapScoreToAllowed(score, maxScore, allowed) {
+  if (!Array.isArray(allowed) || allowed.length === 0) return score;
+  // 해당 배점과 같거나 작은 값들만 필터 (배점 초과 금지)
+  const valid = allowed.filter(v => v <= maxScore);
+  if (!valid.length) return score;
+  // 가장 가까운 값 찾기 (동점이면 더 낮은 쪽 = 보수적)
+  let best = valid[0], bestDiff = Math.abs(score - best);
+  for (const v of valid) {
+    const d = Math.abs(score - v);
+    if (d < bestDiff || (d === bestDiff && v < best)) {
+      best = v; bestDiff = d;
+    }
+  }
+  return best;
+}
+
 /* ── 채점 결과 JSON 파싱 + 합계 검증·자동 보정 ── */
-function parseGradingResult(text) {
+function parseGradingResult(text, rubricText = '') {
   let jsonStr = '';
   const tagged = text.match(/<<<JSON_START>>>([\s\S]*?)<<<JSON_END>>>/);
   if (tagged) {
@@ -2052,7 +2128,23 @@ function parseGradingResult(text) {
     }
   }
 
-  // ── 안전장치: 만점 ≠ 배점 합 / 총점 ≠ 점수 합 자동 보정 ──
+  // ── 안전장치 1: 등급별 고정 점수로 스냅 ──
+  if (result && Array.isArray(result.criteria)) {
+    const allowed = extractAllowedScores(rubricText);
+    if (allowed.length > 0) {
+      result.criteria.forEach(c => {
+        const origScore = Number(c.점수);
+        if (!Number.isFinite(origScore)) return;
+        const snapped = snapScoreToAllowed(origScore, Number(c.배점) || 100, allowed);
+        if (snapped !== origScore) {
+          c.점수 = snapped;
+          result._autoFixed = (result._autoFixed || []).concat(`${c.항목||'?'} ${origScore}→${snapped}점`);
+        }
+      });
+    }
+  }
+
+  // ── 안전장치 2: 만점 ≠ 배점 합 / 총점 ≠ 점수 합 자동 보정 (스냅 후 재계산) ──
   if (result && Array.isArray(result.criteria)) {
     const sumBatjeom = result.criteria.reduce((s, c) => s + (Number(c.배점) || 0), 0);
     const sumJeomsu  = result.criteria.reduce((s, c) => s + (Number(c.점수) || 0), 0);
@@ -2396,7 +2488,7 @@ async function startAnalysis() {
               if (prog) prog.style.width = pct + '%';
             },
             onDone() {
-              const grading = parseGradingResult(gradeText);
+              const grading = parseGradingResult(gradeText, rubric);
               if (grading) {
                 gradingResults[studentName] = grading;
                 gradePanel.innerHTML = renderGradingCard(grading, studentName);
