@@ -821,7 +821,7 @@
         <details class="obs-details">
           <summary class="obs-summary">
             🎤 발표 관찰 체크리스트
-            <span class="obs-summary-hint" id="presObsSummaryHint">선택</span>
+            <span class="obs-summary-hint" id="presObsSummaryHint">선택 — 채점에만 적용</span>
           </summary>
           <div class="obs-content">
             <p class="hint">발표 현장에서 교사가 관찰한 내용을 체크하면 <strong>채점 시 발표력 관련 항목에 반영</strong>됩니다.</p>
@@ -834,7 +834,7 @@
         <details class="obs-details">
           <summary class="obs-summary">
             🤝 협업 능력 체크리스트
-            <span class="obs-summary-hint" id="collabObsSummaryHint">선택</span>
+            <span class="obs-summary-hint" id="collabObsSummaryHint">선택 — 채점에만 적용</span>
           </summary>
           <div class="obs-content">
             <p class="hint">학생 결과물만으로는 판단하기 어려운 협업 능력을 교사가 체크하면 <strong>채점 시 협업 관련 항목에 반영</strong>됩니다.</p>
@@ -1114,8 +1114,8 @@ function getCollabObs() { return _getObs('collab', COLLAB_OBS_ITEMS); }
 /* 아코디언 summary에 "입력됨" 배지 표시 — 요약 보기만으로 상태 파악 */
 function _updateObsSummaryHints() {
   const pairs = [
-    { hintId: 'presObsSummaryHint',   prefix: 'pres',   items: PRES_OBS_ITEMS,   memoId: 'presMemo',   defaultHint: '선택' },
-    { hintId: 'collabObsSummaryHint', prefix: 'collab', items: COLLAB_OBS_ITEMS, memoId: 'collabMemo', defaultHint: '선택' },
+    { hintId: 'presObsSummaryHint',   prefix: 'pres',   items: PRES_OBS_ITEMS,   memoId: 'presMemo',   defaultHint: '선택 — 채점에만 적용' },
+    { hintId: 'collabObsSummaryHint', prefix: 'collab', items: COLLAB_OBS_ITEMS, memoId: 'collabMemo', defaultHint: '선택 — 채점에만 적용' },
   ];
   pairs.forEach(p => {
     const hintEl = document.getElementById(p.hintId);
