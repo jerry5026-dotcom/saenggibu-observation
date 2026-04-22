@@ -53,6 +53,25 @@
       white-space: nowrap;
     }
     .header-link:hover { background: rgba(255,255,255,.28); }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .header-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: rgba(220,38,38,.18);
+      border: 1px solid rgba(252,165,165,.4);
+      border-radius: 8px;
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .18s, transform .12s;
+      white-space: nowrap;
+    }
+    .header-btn:hover { background: rgba(220,38,38,.32); transform: translateY(-1px); }
+    .header-btn:active { transform: translateY(0); }
 
     /* ── Layout ── */
     .layout {
@@ -678,11 +697,16 @@
       <p>수행평가 결과물을 분석하여 생기부 작성 도우미에 입력할 수업 관찰 내용을 생성합니다</p>
     </div>
   </div>
-  <a class="header-link"
-     href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
-     target="_blank" rel="noopener">
-    🔗 생기부 작성 도우미 열기
-  </a>
+  <div class="header-actions">
+    <button type="button" class="header-btn" onclick="resetAll()" title="API 키 제외한 모든 내용을 초기화합니다 (이력은 유지)">
+      🔄 초기화
+    </button>
+    <a class="header-link"
+       href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
+       target="_blank" rel="noopener">
+      🔗 생기부 작성 도우미 열기
+    </a>
+  </div>
 </header>
 
 <div class="layout">
@@ -918,7 +942,7 @@
         <li>필요 시 <strong>발표 관찰 · 협업 능력 체크리스트</strong>를 펼쳐서 입력하세요 <span style="font-size:.76rem; color:#94a3b8;">(채점 시 해당 루브릭 항목에 반영)</span></li>
         <li>학생 수행평가 파일(PDF·DOCX·PPTX·JPG·PNG)을 업로드하세요 <span style="font-size:.76rem; color:#94a3b8;">(파일명 규칙은 아래 참고)</span></li>
         <li><strong>수행평가 분석 시작</strong> 버튼 클릭</li>
-        <li>결과 카드의 <strong>📋 복사</strong> 클릭 →
+        <li>관찰 내용의 <strong>📋 복사</strong> 클릭 →
             <a href="https://jerry5026-dotcom.github.io/saenggibu-writer/index2.html"
                target="_blank" style="color:#1e40af; font-weight:600;">생기부 작성 도우미</a>에 붙여넣기
             · 관찰·채점 결과는 <strong>📊 엑셀 저장(.xlsx)</strong>으로 성적부 활용</li>
@@ -2796,6 +2820,87 @@ function updateGlobalActButtons(mode) {
       <button class="btn btn-ghost btn-sm" onclick="clearAll()">🗑 결과 초기화</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleHistory()">📚 이전 이력</button>
     </div>`;
+}
+
+/* ── 전체 초기화 ──
+   API 키·제공자·모델 선택은 유지, 이력도 유지
+   나머지(파일·입력·체크리스트·결과) 모두 리셋 */
+async function resetAll() {
+  if (_isAnalyzing) { toast('분석 중에는 초기화할 수 없습니다. 먼저 취소해주세요.', 'error'); return; }
+  if (!confirm('API 키를 제외한 모든 내용이 초기화됩니다.\n(이전 이력은 유지됩니다)\n\n계속할까요?')) return;
+
+  // 결과·파일 상태 리셋
+  results        = {};
+  gradingResults = {};
+  files          = [];
+
+  // IndexedDB 학생 파일 스토어 비우기 — 이력 스토어는 유지
+  try {
+    const db = await _openDB();
+    await new Promise(res => {
+      const tx = db.transaction(_STORE, 'readwrite');
+      tx.objectStore(_STORE).clear();
+      tx.oncomplete = res; tx.onerror = res;
+    });
+  } catch {}
+
+  // localStorage 중 app_* 키만 제거 — app_provider는 유지
+  // API 키·모델 키는 app_ 접두사가 없어 자동 유지됨
+  const KEEP_EXACT = new Set(['app_provider']);
+  const toDelete = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('app_') && !KEEP_EXACT.has(k)) toDelete.push(k);
+  }
+  toDelete.forEach(k => localStorage.removeItem(k));
+
+  // 화면 입력 필드 리셋
+  ['subject','topic','rubric','extraNote'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const lenSel = document.getElementById('lengthOption');
+  if (lenSel) lenSel.value = '200';
+  const rubricChip = document.getElementById('rubricChip');
+  if (rubricChip) rubricChip.innerHTML = '';
+
+  // 수행평가 활동 유형 체크 해제
+  document.querySelectorAll('#activityTypeGroup .act-cb').forEach(l => {
+    l.classList.remove('checked');
+    const inp = l.querySelector('input');
+    if (inp) inp.checked = false;
+  });
+
+  // 수행평가 등급 해제
+  document.querySelectorAll('#achieveLevelGroup .act-cb').forEach(l => {
+    l.classList.remove('checked');
+    const inp = l.querySelector('input');
+    if (inp) inp.checked = false;
+  });
+  _updateLevelSummaryHint();
+
+  // 발표·협업 체크리스트 버튼 해제 + 메모 비움
+  document.querySelectorAll('#presObsBox .pres-obs-btn, #collabObsBox .pres-obs-btn')
+    .forEach(b => b.classList.remove('checked'));
+  ['presMemo','collabMemo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  _updateObsSummaryHints();
+
+  // 실행 모드 기본값으로
+  switchMode('observation');
+
+  // 결과·전역 버튼 UI 정리
+  document.getElementById('resultsContainer').innerHTML = '';
+  document.getElementById('globalAct').style.display = 'none';
+  document.getElementById('guideCard').style.display = 'block';
+
+  // 파일 목록 다시 그리기 + 분석 버튼 상태 동기화
+  renderFileList();
+  syncBtn();
+
+  toast('초기화되었습니다 (API 키·이력은 유지)', 'success');
 }
 
 /* ── 분석 취소 ── */
