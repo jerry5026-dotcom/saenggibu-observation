@@ -528,6 +528,8 @@
     .pres-obs-row:last-of-type { border-bottom: none; }
     .pres-obs-label {
       flex: 1; font-size: .78rem; font-weight: 600; color: #713f12;
+      white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
     }
     .pres-obs-buttons {
       display: inline-flex; gap: 4px;
@@ -823,7 +825,7 @@
         <details class="obs-details">
           <summary class="obs-summary">
             🤝 협업 능력 체크리스트
-            <span class="obs-summary-hint" id="collabObsSummaryHint">선택 — 모둠/협업 활동 시</span>
+            <span class="obs-summary-hint" id="collabObsSummaryHint">선택</span>
           </summary>
           <div class="obs-content">
             <p class="hint">학생 결과물만으로는 판단하기 어려운 협업 능력을 교사가 체크하면 <strong>채점 시 협업 관련 항목에 반영</strong>됩니다.</p>
@@ -1104,7 +1106,7 @@ function getCollabObs() { return _getObs('collab', COLLAB_OBS_ITEMS); }
 function _updateObsSummaryHints() {
   const pairs = [
     { hintId: 'presObsSummaryHint',   prefix: 'pres',   items: PRES_OBS_ITEMS,   memoId: 'presMemo',   defaultHint: '선택' },
-    { hintId: 'collabObsSummaryHint', prefix: 'collab', items: COLLAB_OBS_ITEMS, memoId: 'collabMemo', defaultHint: '선택 — 모둠/협업 활동 시' },
+    { hintId: 'collabObsSummaryHint', prefix: 'collab', items: COLLAB_OBS_ITEMS, memoId: 'collabMemo', defaultHint: '선택' },
   ];
   pairs.forEach(p => {
     const hintEl = document.getElementById(p.hintId);
