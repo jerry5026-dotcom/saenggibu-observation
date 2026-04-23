@@ -924,13 +924,24 @@
       </select>
 
       <div style="margin-top:11px;">
-        <label class="fl" id="apiKeyLabel">Anthropic API 키</label>
-        <div class="row2">
-          <input type="password" id="apiKey" placeholder="sk-ant-api..." autocomplete="off" />
-          <button class="btn btn-ghost btn-sm" onclick="saveSettings()">저장</button>
-        </div>
-        <div class="key-validation" id="apiKeyValidation"></div>
-        <p class="hint" id="apiKeyHint">API 키는 브라우저 localStorage에만 저장됩니다.</p>
+        <details class="obs-details" id="apiKeyDetails">
+          <summary class="obs-summary">
+            <span id="apiKeyLabel">Anthropic API 키</span>
+            <span class="obs-summary-hint" id="apiKeyStatusHint">입력 필요</span>
+          </summary>
+          <div class="obs-content">
+            <div class="row2">
+              <input type="password" id="apiKey" placeholder="sk-ant-api..." autocomplete="off" />
+              <button class="btn btn-ghost btn-sm" onclick="saveSettings()">저장</button>
+            </div>
+            <div class="key-validation" id="apiKeyValidation"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="deleteKeyBtn" onclick="deleteApiKey()"
+                    style="margin-top:7px; display:none; color:#b91c1c; border-color:#fecaca; background:#fef2f2;">
+              🗑 저장된 키 삭제
+            </button>
+            <p class="hint" id="apiKeyHint">API 키는 브라우저 localStorage에만 저장됩니다.</p>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -1421,6 +1432,7 @@ function switchProvider(provider) {
   if (!sel.value) sel.selectedIndex = 0;
   syncBtn();
   if (typeof updateKeyValidation === 'function') updateKeyValidation();
+  if (typeof updateApiKeyAccordionState === 'function') updateApiKeyAccordionState();
 }
 
 /* ── IndexedDB (학생 파일 영속 저장) ── */
@@ -1707,6 +1719,47 @@ function syncBtn() {
   document.getElementById('analyzeBtn').disabled = !ok;
 }
 
+/* ── API 키 아코디언 상태 관리 ──
+   저장된 유효한 키가 있으면: 접힘 + '✓ 저장됨' 배지 + 삭제 버튼 노출
+   없거나 형식 오류면: 펼침 + 안내 힌트 + 삭제 버튼 숨김 */
+function updateApiKeyAccordionState() {
+  const details = document.getElementById('apiKeyDetails');
+  const hint    = document.getElementById('apiKeyStatusHint');
+  const delBtn  = document.getElementById('deleteKeyBtn');
+  if (!details || !hint) return;
+
+  const meta     = PROVIDER_META[getProvider()];
+  const savedKey = (localStorage.getItem(meta.storageKey) || '').trim();
+  const hasValidSavedKey = savedKey.length > 0 && meta.keyValid(savedKey);
+
+  if (hasValidSavedKey) {
+    details.open = false;
+    hint.className = 'obs-summary-filled';
+    hint.textContent = '✓ 저장됨';
+    if (delBtn) delBtn.style.display = 'inline-flex';
+  } else {
+    details.open = true;
+    hint.className = 'obs-summary-hint';
+    hint.textContent = savedKey ? '형식 오류 — 재입력 필요' : '입력 필요';
+    if (delBtn) delBtn.style.display = 'none';
+  }
+}
+
+/* 저장된 API 키 삭제 */
+function deleteApiKey() {
+  const meta = PROVIDER_META[getProvider()];
+  const hasKey = (localStorage.getItem(meta.storageKey) || '').length > 0;
+  if (!hasKey) return;
+  if (!confirm('저장된 API 키를 삭제할까요?\n(다른 제공자의 키는 유지됩니다)')) return;
+  localStorage.removeItem(meta.storageKey);
+  const inp = document.getElementById('apiKey');
+  if (inp) inp.value = '';
+  updateApiKeyAccordionState();
+  updateKeyValidation();
+  syncBtn();
+  toast('API 키를 삭제했습니다', 'info');
+}
+
 /* ── API 키 실시간 형식 검증 피드백 ── */
 function updateKeyValidation() {
   const el = document.getElementById('apiKeyValidation');
@@ -1746,6 +1799,7 @@ function saveSettings() {
   localStorage.setItem(meta.modelKey,   m);
   toast(k ? '저장되었습니다' : '저장되었습니다 (API 키 삭제)', 'success');
   syncBtn();
+  updateApiKeyAccordionState();  // 저장 직후 상태 반영 (유효키면 자동 접힘)
 }
 
 /* ── File utils ── */
@@ -3153,6 +3207,7 @@ async function resetAll() {
   // 파일 목록 다시 그리기 + 분석 버튼 상태 동기화
   renderFileList();
   syncBtn();
+  if (typeof updateApiKeyAccordionState === 'function') updateApiKeyAccordionState();
 
   toast('초기화되었습니다 (API 키·이력은 유지)', 'success');
 }
