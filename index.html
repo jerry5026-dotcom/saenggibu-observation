@@ -932,6 +932,42 @@
       </div>
 
       <div style="margin-top:10px;">
+        <details class="obs-details">
+          <summary class="obs-summary">
+            📋 채점 기준 (루브릭)
+            <span class="obs-summary-hint" id="rubricSummaryHint">선택 — 채점 정확도 향상</span>
+          </summary>
+          <div class="obs-content">
+            <button type="button" class="upload-mini" onclick="document.getElementById('rubricFile').click()">
+              📎 PDF / DOCX 파일로 불러오기
+            </button>
+            <input type="file" id="rubricFile" accept=".pdf,.docx" style="display:none"
+                   onchange="loadRubricFile(this.files[0]); this.value='';" />
+            <div id="rubricChip"></div>
+
+            <label class="fl">채점 기준 직접 입력 <span style="font-weight:400;color:#94a3b8;">(또는 파일 업로드)</span></label>
+            <textarea id="rubric" style="min-height:140px; resize:vertical;"
+              placeholder="채점 기준이 없어도 관찰 내용은 생성됩니다.
+채점 모드에선 입력 권장.
+
+[등급별 점수 지정 예시]
+[내용의 정확성] A 20점 / B 17점 / C 14점 / D 11점 / E 8점
+  — 개념 이해·적용의 정확성
+[논리적 구성] A 20 / B 17 / C 14 / D 11 / E 8
+  — 주장-근거 구조의 명확성
+[창의적 사고] 20-17-14-11-8
+  — 독창적 시각 또는 해결책 제시
+
+※ 위처럼 등급별 고정 점수를 쓰면 AI가 그 값만 사용합니다
+  (중간 점수 19, 18, 16 등은 나오지 않음)"></textarea>
+            <p class="hint" style="margin-top:5px;">
+              💡 채점 모드 팁: <strong>"A 20점 B 17점 C 14점 D 11점 E 8점"</strong> 형태로 등급별 점수를 명시하면 AI가 그 값만 사용합니다. 중간 값(19·18점 등)은 자동으로 가까운 허용 값으로 보정됩니다.
+            </p>
+          </div>
+        </details>
+      </div>
+
+      <div style="margin-top:10px;">
         <label class="fl">글자 수 제한</label>
         <select id="lengthOption">
           <option value="100">100자 이내 (핵심 압축)</option>
@@ -994,39 +1030,8 @@
           </div>
         </details>
       </div>
-    </div>
 
-    <!-- 채점 기준 -->
-    <div class="card" style="flex:1; display:flex; flex-direction:column;">
-      <div class="card-title">📋 채점 기준 <span style="font-weight:400; font-size:.75rem; color:#64748b;">(루브릭)</span></div>
-
-      <button class="upload-mini" onclick="document.getElementById('rubricFile').click()">
-        📎 PDF / DOCX 파일로 불러오기
-      </button>
-      <input type="file" id="rubricFile" accept=".pdf,.docx" style="display:none"
-             onchange="loadRubricFile(this.files[0]); this.value='';" />
-      <div id="rubricChip"></div>
-
-      <label class="fl">채점 기준 직접 입력 <span style="font-weight:400;color:#94a3b8;">(또는 파일 업로드)</span></label>
-      <textarea id="rubric" style="flex:1; min-height:160px;"
-        placeholder="채점 기준이 없어도 관찰 내용은 생성됩니다.
-채점 모드에선 입력 권장.
-
-[등급별 점수 지정 예시]
-[내용의 정확성] A 20점 / B 17점 / C 14점 / D 11점 / E 8점
-  — 개념 이해·적용의 정확성
-[논리적 구성] A 20 / B 17 / C 14 / D 11 / E 8
-  — 주장-근거 구조의 명확성
-[창의적 사고] 20-17-14-11-8
-  — 독창적 시각 또는 해결책 제시
-
-※ 위처럼 등급별 고정 점수를 쓰면 AI가 그 값만 사용합니다
-  (중간 점수 19, 18, 16 등은 나오지 않음)"></textarea>
-      <p class="hint" style="margin-top:5px;">
-        💡 채점 모드 팁: <strong>"A 20점 B 17점 C 14점 D 11점 E 8점"</strong> 형태로 등급별 점수를 명시하면 AI가 그 값만 사용합니다. 중간 값(19·18점 등)은 자동으로 가까운 허용 값으로 보정됩니다.
-      </p>
-
-      <div style="margin-top:9px;">
+      <div style="margin-top:10px;">
         <label class="fl">추가 메모 <span style="font-weight:400;color:#94a3b8;">(선택 — 학급 전체에 해당하는 특이사항 등)</span></label>
         <textarea id="extraNote" style="min-height:52px; resize:vertical;"
           placeholder="예: 이 수업은 모둠 활동이었으며 개인 역할이 명시됨"></textarea>
@@ -1546,6 +1551,22 @@ function _updateLevelSummaryHint() {
   }
 }
 
+/* 채점 기준 아코디언 요약에 입력 상태 배지 표시 */
+function _updateRubricSummaryHint() {
+  const hintEl = document.getElementById('rubricSummaryHint');
+  if (!hintEl) return;
+  const t = (document.getElementById('rubric')?.value || '').trim();
+  const fileName = localStorage.getItem('app_rubric_file');
+  if (t || fileName) {
+    hintEl.className = 'obs-summary-filled';
+    const len = t.length;
+    hintEl.textContent = fileName ? `✓ 파일 불러옴` : `✓ ${len}자 입력됨`;
+  } else {
+    hintEl.className = 'obs-summary-hint';
+    hintEl.textContent = '선택 — 채점 정확도 향상';
+  }
+}
+
 /* ── localStorage 자동 저장 헬퍼 ── */
 const LS_FIELDS = ['subject','topic','rubric','extraNote','lengthOption'];
 function _saveField(id) {
@@ -1599,6 +1620,10 @@ function _restoreFields() {
     localStorage.setItem('app_collabMemo', e.target.value);
     _updateObsSummaryHints();
   });
+
+  // 채점 기준 입력 시 summary 배지 업데이트
+  document.getElementById('rubric')?.addEventListener('input', _updateRubricSummaryHint);
+  _updateRubricSummaryHint();  // 초기 상태 반영
 
   // 드래그 앤 드롭
   const dz = document.getElementById('dropZone');
@@ -1737,6 +1762,7 @@ async function loadRubricFile(file) {
     localStorage.setItem('app_rubric_file_ext', e);
     localStorage.setItem('app_rubric', text);
     toast('채점 기준을 불러왔습니다', 'success');
+    _updateRubricSummaryHint();
   } catch (err) { toast('읽기 실패: '+err.message, 'error'); }
 }
 function clearRubric() {
@@ -1745,6 +1771,7 @@ function clearRubric() {
   localStorage.removeItem('app_rubric_file');
   localStorage.removeItem('app_rubric_file_ext');
   localStorage.removeItem('app_rubric');
+  _updateRubricSummaryHint();
 }
 
 /* ── 파일명에서 학생 이름 + 파일 설명 추출 ──
@@ -3043,6 +3070,7 @@ async function resetAll() {
     if (inp) inp.checked = false;
   });
   _updateLevelSummaryHint();
+  _updateRubricSummaryHint();
 
   // 발표·협업 체크리스트 버튼 해제 + 메모 비움
   document.querySelectorAll('#presObsBox .pres-obs-btn, #collabObsBox .pres-obs-btn')
