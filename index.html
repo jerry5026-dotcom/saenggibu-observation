@@ -455,6 +455,234 @@
       height:1px; background:#e2e8f0; margin: 10px 0;
     }
 
+    /* ══════════════════════════════════════
+       반응형 (태블릿 · 모바일) — PC 화면은 그대로 유지
+       ══════════════════════════════════════ */
+
+    /* ── 태블릿 (900px 이하): 2단 → 1단 레이아웃 ── */
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+        padding: 12px;
+        gap: 12px;
+        min-height: 0;
+      }
+      .sidebar, .main-area {
+        overflow-y: visible;
+        padding-right: 0;
+      }
+      header {
+        padding: 11px 16px;
+      }
+      header h1 { font-size: 1rem; }
+      header p  { font-size: .7rem; }
+      .header-actions { gap: 6px; }
+      .header-btn, .header-link {
+        padding: 6px 11px;
+        font-size: .74rem;
+      }
+      /* 사이드바 카드가 너무 넓어지지 않도록 */
+      .sidebar .card {
+        max-width: 100%;
+      }
+    }
+
+    /* ── 모바일 (600px 이하) ── */
+    @media (max-width: 600px) {
+      body { font-size: 14px; }
+
+      /* 헤더 — 세로 스택 */
+      header {
+        padding: 9px 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .header-left { justify-content: flex-start; }
+      .header-left .logo { font-size: 1.4rem; }
+      header h1 { font-size: .95rem; }
+      header p {
+        font-size: .67rem;
+        margin-top: 1px;
+        line-height: 1.35;
+      }
+      .header-actions { justify-content: flex-end; }
+      .header-btn, .header-link {
+        padding: 6px 10px;
+        font-size: .72rem;
+      }
+
+      /* 레이아웃·카드 여백 */
+      .layout {
+        padding: 10px;
+        gap: 10px;
+      }
+      .card { padding: 14px 14px; border-radius: 11px; }
+      .card-title {
+        font-size: .82rem;
+        margin-bottom: 10px;
+        padding-bottom: 7px;
+      }
+
+      /* 입력 필드 */
+      input[type="password"], input[type="text"], textarea, select {
+        font-size: .88rem;
+        padding: 9px 11px;
+      }
+      label.fl { font-size: .78rem; }
+
+      /* 버튼 */
+      .btn-primary {
+        padding: 12px;
+        font-size: .9rem;
+      }
+      .btn-sm {
+        padding: 6px 11px;
+        font-size: .78rem;
+      }
+
+      /* 모드 토글 */
+      .mode-option { padding: 10px 12px; }
+      .mode-icon { font-size: 1.2rem; }
+      .mode-title { font-size: .85rem; }
+      .mode-desc {
+        font-size: .7rem;
+        line-height: 1.4;
+      }
+
+      /* 활동 유형 체크박스 */
+      .act-cb-group {
+        padding: 8px 9px;
+        gap: 5px;
+      }
+      .act-cb {
+        padding: 5px 11px;
+        font-size: .76rem;
+      }
+
+      /* 아코디언 */
+      .obs-summary { padding: 10px 12px; font-size: .82rem; }
+      .obs-summary-hint { font-size: .67rem; }
+      .obs-content { padding: 10px 12px; }
+
+      /* 파일 업로드 영역 */
+      .drop-zone {
+        padding: 18px 12px;
+      }
+      .drop-zone .dz-icon { font-size: 1.9rem; }
+      .drop-zone p { font-size: .78rem; }
+
+      /* 파일 칩 */
+      .f-chip { font-size: .76rem; padding: 6px 10px; }
+      .file-chip { font-size: .74rem; padding: 5px 9px; }
+
+      /* 결과 카드 */
+      .result-card { border-radius: 11px; }
+      .rc-head { padding: 10px 13px; flex-wrap: wrap; gap: 6px; }
+      .rc-head h3 { font-size: .83rem; line-height: 1.4; }
+      .rc-head .rc-sub { font-size: .68rem; }
+      .rc-body { padding: 13px 14px; }
+
+      /* 관찰 문장 */
+      .obs-sentence { padding: 8px 10px; }
+      .obs-line { font-size: .83rem; line-height: 1.6; }
+      .copy-preview {
+        padding: 10px 12px;
+        font-size: .82rem;
+      }
+
+      /* 버전 번호 배지 */
+      .obs-num { width: 18px; height: 18px; font-size: .65rem; }
+
+      /* 결과 탭 */
+      .rc-tabs { overflow-x: auto; }
+      .rc-tab {
+        padding: 9px 13px;
+        font-size: .78rem;
+        white-space: nowrap;
+      }
+
+      /* 채점 요약 */
+      .grade-summary {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 14px;
+      }
+      .grade-total-num {
+        text-align: center;
+        min-width: 0;
+        font-size: 1.85rem;
+      }
+      .criterion { padding: 9px 10px; }
+      .crit-name { font-size: .8rem; }
+      .crit-score { font-size: .78rem; }
+      .crit-reason { font-size: .75rem; }
+      .grade-comment {
+        padding: 10px 12px;
+        font-size: .78rem;
+      }
+
+      /* 발표·협업 체크리스트 */
+      .pres-obs-box { padding: 8px 10px; }
+      .pres-obs-row { padding: 5px 0; }
+      .pres-obs-label { font-size: .76rem; }
+      .pres-obs-btn { min-width: 30px; padding: 3px 9px; font-size: .73rem; }
+
+      /* 프롬프트 복사 모드 */
+      .pc-prompt-block { padding: 9px 11px; }
+      .pc-prompt-text {
+        max-height: 180px;
+        font-size: .72rem;
+        padding: 8px 10px;
+      }
+      .pc-ai-links { flex-direction: column; gap: 5px; }
+      .pc-ai-link {
+        justify-content: center;
+        padding: 6px 10px;
+        font-size: .76rem;
+      }
+      .pc-response-textarea { min-height: 100px; font-size: .78rem; }
+      .pc-analyze-btn {
+        width: 100%;
+        padding: 10px;
+        font-size: .85rem;
+      }
+
+      /* 토스트 */
+      #toast {
+        bottom: 14px;
+        left: 14px;
+        right: 14px;
+        font-size: .78rem;
+        text-align: center;
+      }
+
+      /* 하단 크레딧 */
+      .page-footer {
+        font-size: .68rem;
+        text-align: center;
+        padding: 6px 12px 10px;
+        line-height: 1.55;
+      }
+      .page-footer .sep { margin: 0 5px; }
+    }
+
+    /* ── 초소형 화면 (400px 이하) ── */
+    @media (max-width: 400px) {
+      header h1 { font-size: .88rem; }
+      header p { font-size: .62rem; }
+      .card { padding: 12px 13px; }
+      .card-title { font-size: .78rem; }
+      .mode-option { padding: 9px 10px; }
+      .mode-title { font-size: .82rem; }
+      .mode-desc { font-size: .68rem; }
+      .act-cb { font-size: .72rem; padding: 4px 9px; }
+      .btn-primary { padding: 11px; font-size: .86rem; }
+      .pc-ai-link { font-size: .72rem; }
+    }
+
     /* ── 하단 크레딧 (은은하게) ── */
     .page-footer {
       text-align: right;
