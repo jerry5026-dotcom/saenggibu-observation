@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>수행평가 AI 도우미 — 관찰 문장·루브릭 채점 자동 생성</title>
+  <title>수행평가 AI 도우미 — 관찰 문장·수행평가 채점 자동 생성</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -838,7 +838,7 @@
           <input type="radio" name="mode" value="grading">
           <span class="mode-icon">📊</span>
           <div class="mode-text-wrap">
-            <div class="mode-title">루브릭 채점</div>
+            <div class="mode-title">수행평가 채점</div>
             <div class="mode-desc">채점 기준별 점수 · 등급 · 근거 자동 산출</div>
           </div>
         </label>
@@ -934,8 +934,7 @@
       <div style="margin-top:10px;">
         <details class="obs-details">
           <summary class="obs-summary">
-            📋 채점 기준 (루브릭)
-            <span class="obs-summary-hint" id="rubricSummaryHint">선택 — 채점 정확도 향상</span>
+            📋 채점 기준            <span class="obs-summary-hint" id="rubricSummaryHint">선택 — 채점 정확도 향상</span>
           </summary>
           <div class="obs-content">
             <button type="button" class="upload-mini" onclick="document.getElementById('rubricFile').click()">
@@ -1066,9 +1065,9 @@
     <div class="card" id="guideCard">
       <div class="card-title">💡 사용 방법</div>
       <ol style="padding-left:18px; font-size:.84rem; line-height:2.1; color:#475569;">
-        <li><strong>실행 모드</strong>를 선택하세요 — 관찰 내용 생성 · 루브릭 채점 · 동시 실행(추천)</li>
+        <li><strong>실행 모드</strong>를 선택하세요 — 관찰 내용 생성 · 수행평가 채점 · 동시 실행(추천)</li>
         <li>AI 제공자(Claude·ChatGPT·Gemini)를 선택하고 <strong>API 키</strong>와 <strong>과목명</strong>을 입력하세요</li>
-        <li>채점 기준(루브릭)을 입력하거나 파일로 불러오세요<br>
+        <li>채점 기준을 입력하거나 파일로 불러오세요<br>
             <span style="font-size:.76rem; color:#94a3b8;">관찰 모드에선 선택 사항 · 채점 모드에선 권장</span></li>
         <li>필요 시 <strong>발표·협업 체크리스트</strong>를 펼쳐서 입력하세요 <span style="font-size:.76rem; color:#94a3b8;">(채점 시 해당 루브릭 항목에 반영)</span></li>
         <li>학생 수행평가 파일(PDF·DOCX·PPTX·JPG·PNG)을 업로드하세요 <span style="font-size:.76rem; color:#94a3b8;">(파일명 규칙은 아래 참고)</span></li>
@@ -1085,7 +1084,7 @@
         <strong>🎯 실행 모드 안내</strong>
         <ul style="margin:6px 0 0 18px; padding:0;">
           <li><strong>관찰 내용 생성</strong> — 생기부 세특 생성용 "~함." 관찰 문장 3버전 생성</li>
-          <li><strong>루브릭 채점</strong> — 평가 항목별 점수·등급·근거 + 엑셀(.xlsx) 저장</li>
+          <li><strong>수행평가 채점</strong> — 평가 항목별 점수·등급·근거 + 엑셀(.xlsx) 저장</li>
           <li><strong>동시 실행 (추천)</strong> — 파일 파싱·추출 1회로 관찰+채점 동시 처리 (비용 최소화)</li>
           <li><strong>🆓 프롬프트 복사 모드</strong> — <u>API 키 없이</u> 무료 AI(ChatGPT·Claude·Gemini 웹)로 처리
             <div style="font-size:.73rem; color:#6366f1; margin-top:3px;">① 프롬프트 복사 → ② 무료 AI에 붙여넣기 → ③ 답변을 다시 카드에 붙여넣고 "분석" 클릭</div>
@@ -1744,7 +1743,7 @@ async function loadRubricFile(file) {
         if (!imageData.length) throw new Error('PDF에서 이미지를 추출할 수 없습니다');
         text = (await callAIOnce({
           apiKey, model, maxTokens: CONFIG.RUBRIC_OCR_MAX_TOKENS, imageData,
-          system: '당신은 PDF 이미지에서 채점 기준표(루브릭) 텍스트를 정확히 추출하는 OCR 전문 AI입니다. 원문을 그대로 추출하며, 설명이나 요약을 추가하지 않습니다.',
+          system: '당신은 PDF 이미지에서 채점 기준표 텍스트를 정확히 추출하는 OCR 전문 AI입니다. 원문을 그대로 추출하며, 설명이나 요약을 추가하지 않습니다.',
           prompt: '첨부된 이미지는 수행평가 채점 기준표입니다. 이미지 속 모든 텍스트를 원문 그대로 한글로 추출하세요. 표 형식이면 평가 항목·기준·배점을 항목별로 정리하세요. 헤더나 설명 없이 추출된 텍스트만 출력하세요.'
         })).trim();
         if (!text) throw new Error('AI가 텍스트를 추출하지 못했습니다');
@@ -2218,7 +2217,7 @@ function buildStep1Prompt({ subject, actType, topic, rubric, extra, achieveLevel
 교사가 수행평가 결과물의 내용을 정확히 파악할 수 있도록 빠짐없이 정리합니다.
 학생 이름은 출력에 포함하지 않습니다.${fileCount > 1 ? `\n\n여러 파일(${fileCount}개)이 제공되면 이들은 같은 학생/모둠의 동일 과제에 대한 서로 다른 결과물(예: 보고서 + 발표자료)입니다. 파일 간 중복·보완 관계를 파악하여 하나의 통합된 분석을 수행하세요.` : ''}`;
 
-  const rubricSection = rubric ? `\n## 채점 기준 (루브릭)\n${rubric}\n` : '';
+  const rubricSection = rubric ? `\n## 채점 기준 \n${rubric}\n` : '';
   const actSection    = actType ? `수행평가 유형: ${actType}\n` : '';
   const topicSection  = topic   ? `단원/주제: ${topic}\n`       : '';
   const levelSection  = achieveLevel ? `성취 수준: ${achieveLevel}\n` : '';
@@ -2311,12 +2310,12 @@ ${extractedContent}
 
 /* ── 채점 프롬프트 ── */
 function buildGradingPrompt({ subject, actType, topic, rubric, achieveLevel, extractedContent, presObs, collabObs, isGroup, groupTitle }) {
-  const system = `당신은 학생 수행평가를 채점 기준표(루브릭)에 따라 정확하고 공정하게 평가하는 채점 전문 AI입니다.
+  const system = `당신은 학생 수행평가를 채점 기준표에 따라 정확하고 공정하게 평가하는 채점 전문 AI입니다.
 각 평가 항목별로 점수·등급·구체적 근거를 제시하고, 반드시 지정된 JSON 형식으로만 출력합니다.
 학생 이름은 출력에 포함하지 않습니다.`;
 
   const rubricSection = rubric
-    ? `\n## 채점 기준 (루브릭)\n${rubric}\n`
+    ? `\n## 채점 기준 \n${rubric}\n`
     : `\n## 채점 기준\n(루브릭 미입력 — 아래 일반 기준으로 평가)\n- 내용의 정확성 (30점)\n- 논리적 구성 (25점)\n- 창의적 사고 (20점)\n- 자료 활용 및 표현 (15점)\n- 완성도 (10점)\n`;
 
   const presSection = presObs
@@ -2735,7 +2734,7 @@ async function startAnalysis() {
 
   // 채점 모드인데 루브릭이 없으면 경고
   if (doGrade && !rubric) {
-    if (!confirm('채점 기준(루브릭)이 입력되지 않았습니다.\n일반 학업 기준(내용/논리/창의/자료/완성도 100점 만점)으로 채점됩니다.\n계속할까요?')) return;
+    if (!confirm('채점 기준이 입력되지 않았습니다.\n일반 학업 기준(내용/논리/창의/자료/완성도 100점 만점)으로 채점됩니다.\n계속할까요?')) return;
   }
 
   results        = {};
@@ -3107,7 +3106,7 @@ async function startPromptCopyMode({ subject, actType, topic, rubric, extra, ach
   const collabObs = doGrade ? getCollabObs() : null;
 
   if (doGrade && !rubric) {
-    if (!confirm('채점 기준(루브릭)이 입력되지 않았습니다.\n일반 기준으로 채점됩니다. 계속할까요?')) return;
+    if (!confirm('채점 기준이 입력되지 않았습니다.\n일반 기준으로 채점됩니다. 계속할까요?')) return;
   }
 
   results        = {};
@@ -3220,7 +3219,7 @@ function buildPromptCopyText({ subject, actType, topic, rubric, extra, achieveLe
   const actSection   = actType ? `- 수행평가 유형: ${actType}\n` : '';
   const topicSection = topic   ? `- 단원/주제: ${topic}\n` : '';
   const levelSection = (doObs && achieveLevel) ? `- 관찰용 성취 수준: ${achieveLevel}${levelGuide ? ` (${levelGuide})` : ''}\n` : '';
-  const rubricSection = rubric ? `\n## 채점 기준 (루브릭)\n${rubric}\n` : '';
+  const rubricSection = rubric ? `\n## 채점 기준 \n${rubric}\n` : '';
   const extraSection  = extra  ? `\n## 수업 특이사항\n${extra}\n` : '';
   const mergedNote    = fileCount > 1 ? `\n※ 아래 결과물은 한 학생/모둠의 ${fileCount}개 파일이 통합되어 있습니다.\n` : '';
 
@@ -3254,7 +3253,7 @@ ${levelGuide ? `- 성취 수준(${achieveLevel})에 맞게: ${levelGuide}` : ''}
 
   const gradeBlock = doGrade ? `
 
-## 📊 결과 2: 루브릭 채점
+## 📊 결과 2: 수행평가 채점
 
 【필수 규칙 — 반드시 준수】
 1. 루브릭에 명시된 "항목명"과 "배점"을 그대로 사용 (임의 항목 추가·제거 금지)
