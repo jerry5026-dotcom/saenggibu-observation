@@ -1687,6 +1687,12 @@ function _restoreFields() {
   // API 키 입력 시 실시간 형식 검증 피드백
   document.getElementById('apiKey')?.addEventListener('input', updateKeyValidation);
 
+  // 모델 선택 즉시 자동 저장 (제공자 왕복 시에도 선택 유지)
+  document.getElementById('modelSelect')?.addEventListener('change', e => {
+    const meta = PROVIDER_META[getProvider()];
+    if (meta) localStorage.setItem(meta.modelKey, e.target.value);
+  });
+
   // IndexedDB에서 파일 복원
   try {
     const saved = await _loadAllFiles();
