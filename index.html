@@ -4076,7 +4076,7 @@ function toast(msg, type='info') {
     .then(data => {
       if (!Array.isArray(data) || !data[0]) return;
       const d = new Date(data[0].commit.committer.date);
-      el.textContent = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+      el.textContent = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}.`;
     })
     .catch(() => { /* API 실패 시 기본값 유지 */ });
 })();
