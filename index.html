@@ -698,6 +698,11 @@
     .page-footer a { color: inherit; text-decoration: none; }
     .page-footer a:hover { color: #1e40af; text-decoration: underline; }
     .page-footer .sep { margin: 0 8px; opacity: .5; }
+    .page-footer .meta-line {
+      margin-top: 3px;
+      font-size: .68rem;
+      opacity: .78;
+    }
 
     /* ── Activity type checkboxes ── */
     .act-cb-group {
@@ -1416,9 +1421,14 @@
 </div>
 
 <footer class="page-footer">
-  <span>선생님의 소중한 퇴근 시간을 응원합니다</span>
-  <span class="sep">|</span>
-  <span>조기원 (강원 모 고등학교, <a href="mailto:jerry5026@gmail.com">jerry5026@gmail.com</a>)</span>
+  <div>
+    <span>선생님의 소중한 퇴근 시간을 응원합니다</span>
+    <span class="sep">|</span>
+    <span>조기원 (강원 모 고등학교, <a href="mailto:jerry5026@gmail.com">jerry5026@gmail.com</a>)</span>
+  </div>
+  <div class="meta-line">
+    마지막 업데이트 <span id="lastUpdateDate">—</span> · v1.0 · 계속 다듬어 나가는 중입니다
+  </div>
 </footer>
 
 <div id="toast"></div>
@@ -4056,6 +4066,20 @@ function toast(msg, type='info') {
   clearTimeout(_tt);
   _tt = setTimeout(() => el.classList.remove('show'), 3500);
 }
+
+/* ── 하단 "마지막 업데이트" — GitHub 최근 커밋 자동 조회 ── */
+(function fetchLastUpdate() {
+  const el = document.getElementById('lastUpdateDate');
+  if (!el) return;
+  fetch('https://api.github.com/repos/jerry5026-dotcom/saenggibu-observation/commits?per_page=1')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!Array.isArray(data) || !data[0]) return;
+      const d = new Date(data[0].commit.committer.date);
+      el.textContent = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    })
+    .catch(() => { /* API 실패 시 기본값 유지 */ });
+})();
 </script>
 </body>
 </html>
