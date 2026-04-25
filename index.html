@@ -282,8 +282,8 @@
       border-color: rgba(187,247,208,.5);
     }
     .header-btn.key-ok:hover { background: rgba(34,197,94,.32); }
-    .header-btn.has-badge { position: relative; }
-    .header-btn .hb-badge {
+    .header-btn.has-badge, .tb-mode-btn.has-badge { position: relative; }
+    .header-btn .hb-badge, .tb-mode-btn .hb-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1281,9 +1281,6 @@
     <button type="button" class="header-btn" onclick="openModal('guideModal')" title="이 프로그램 사용 방법">
       📖 사용방법
     </button>
-    <button type="button" class="header-btn has-badge" id="checklistHeaderBtn" onclick="openModal('checklistModal')" title="발표·협업 체크리스트">
-      📋 체크리스트<span class="hb-badge" id="checklistBadge" style="display:none;">0</span>
-    </button>
     <button type="button" class="header-btn" onclick="openModal('historyModal')" title="이전 분석 이력 보기">
       📚 이력
     </button>
@@ -1355,6 +1352,12 @@
       <button type="button" class="tb-mode-btn" data-act="독서 감상문" onclick="toggleActBtn(this)">독서감상</button>
       <button type="button" class="tb-mode-btn" data-act="토론·토의 활동" onclick="toggleActBtn(this)">토론·토의</button>
       <button type="button" class="tb-mode-btn" data-act="포트폴리오" onclick="toggleActBtn(this)">포트폴리오</button>
+    </div>
+
+    <div class="tb-group">
+      <button type="button" class="tb-mode-btn has-badge" id="checklistHeaderBtn" onclick="openModal('checklistModal')" title="발표·협업 체크리스트 — 채점 시 반영" style="font-weight:700;">
+        📋 체크리스트<span class="hb-badge" id="checklistBadge" style="display:none;">0</span>
+      </button>
     </div>
 
     <div class="tb-group">
@@ -1661,7 +1664,7 @@
     <a href="mailto:jerry5026@gmail.com">jerry5026@gmail.com</a>
   </div>
   <div class="meta-line">
-    마지막 업데이트 <span id="lastUpdateDate">—</span> · v2.0.0 · 계속 다듬어 나가는 중입니다
+    마지막 업데이트 <span id="lastUpdateDate">—</span> · v2.0.1 · 계속 다듬어 나가는 중입니다
   </div>
 </footer>
 
