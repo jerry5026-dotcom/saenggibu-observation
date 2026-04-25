@@ -114,12 +114,44 @@
       font-weight: 700;
       color: #1e40af;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    /* 필수/선택 표시 — 작은 배지 */
+    .tb-req, .tb-opt {
+      font-size: .62rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 99px;
+      letter-spacing: -.2px;
+    }
+    .tb-req {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    .tb-opt {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
     }
     .tb-divider {
       width: 1px;
       align-self: stretch;
       background: #e2e8f0;
       margin: 2px 4px;
+    }
+    /* 체크리스트 버튼 — 활동과 시각적으로 구분 (호박색 톤) */
+    .tb-checklist-btn {
+      background: #fef3c7 !important;
+      border: 1.5px solid #f59e0b !important;
+      color: #92400e !important;
+      font-weight: 700;
+    }
+    .tb-checklist-btn:hover {
+      background: #fde68a !important;
+      border-color: #d97706 !important;
     }
     .tb-mode-btn,
     .tb-prov-btn {
@@ -1303,7 +1335,7 @@
   <!-- ══════════ TOOLBAR ROW 1: 실행 모드 + AI ══════════ -->
   <div class="toolbar" id="toolbarRow1">
     <div class="tb-group" id="modeGroup">
-      <span class="tb-label">🎯 모드</span>
+      <span class="tb-label">🎯 모드 <span class="tb-req">필수</span></span>
       <button type="button" class="tb-mode-btn checked" data-mode="observation" onclick="switchMode('observation')">📋 관찰</button>
       <button type="button" class="tb-mode-btn" data-mode="grading" onclick="switchMode('grading')">📊 채점</button>
       <button type="button" class="tb-mode-btn" data-mode="both" onclick="switchMode('both')">✨ 동시</button>
@@ -1323,7 +1355,7 @@
     <div class="tb-divider"></div>
 
     <div class="tb-group" id="providerGroup">
-      <span class="tb-label">🤖 AI</span>
+      <span class="tb-label">🤖 AI <span class="tb-req">필수</span></span>
       <button type="button" class="tb-prov-btn checked" data-provider="anthropic" onclick="switchProvider('anthropic')">🧠 Claude</button>
       <button type="button" class="tb-prov-btn" data-provider="openai" onclick="switchProvider('openai')">💬 ChatGPT</button>
       <button type="button" class="tb-prov-btn" data-provider="gemini" onclick="switchProvider('gemini')">✨ Gemini</button>
@@ -1338,12 +1370,12 @@
   <!-- ══════════ TOOLBAR ROW 2: 수업 정보 ══════════ -->
   <div class="toolbar" id="toolbarRow2">
     <div class="tb-group">
-      <span class="tb-label">📚 과목</span>
+      <span class="tb-label">📚 과목 <span class="tb-req">필수</span></span>
       <input type="text" id="subject" class="tb-input" placeholder="예: 통합사회, 생명과학Ⅱ..." />
     </div>
 
     <div class="tb-group" id="activityTypeGroup" style="gap:4px;">
-      <span class="tb-label">활동</span>
+      <span class="tb-label">활동 <span class="tb-opt">선택</span></span>
       <button type="button" class="tb-mode-btn" data-act="보고서 작성" onclick="toggleActBtn(this)">보고서</button>
       <button type="button" class="tb-mode-btn" data-act="발표 및 PPT 제작" onclick="toggleActBtn(this)">발표·PPT</button>
       <button type="button" class="tb-mode-btn" data-act="실험·탐구 보고서" onclick="toggleActBtn(this)">실험·탐구</button>
@@ -1354,19 +1386,23 @@
       <button type="button" class="tb-mode-btn" data-act="포트폴리오" onclick="toggleActBtn(this)">포트폴리오</button>
     </div>
 
+    <div class="tb-divider"></div>
+
     <div class="tb-group">
-      <button type="button" class="tb-mode-btn has-badge" id="checklistHeaderBtn" onclick="openModal('checklistModal')" title="발표·협업 체크리스트 — 채점 시 반영" style="font-weight:700;">
-        📋 체크리스트<span class="hb-badge" id="checklistBadge" style="display:none;">0</span>
+      <button type="button" class="tb-mode-btn tb-checklist-btn has-badge" id="checklistHeaderBtn" onclick="openModal('checklistModal')" title="발표·협업 체크리스트 — 채점 시 반영">
+        📋 체크리스트 <span class="tb-opt">선택</span><span class="hb-badge" id="checklistBadge" style="display:none;">0</span>
       </button>
     </div>
 
+    <div class="tb-divider"></div>
+
     <div class="tb-group">
-      <span class="tb-label">주제</span>
-      <input type="text" id="topic" class="tb-input" placeholder="단원·주제 (선택)" />
+      <span class="tb-label">주제 <span class="tb-opt">선택</span></span>
+      <input type="text" id="topic" class="tb-input" placeholder="단원·주제" />
     </div>
 
     <div class="tb-group">
-      <span class="tb-label">글자수</span>
+      <span class="tb-label">글자수 <span class="tb-req">필수</span></span>
       <select id="lengthOption" class="tb-select" style="min-width:auto;">
         <option value="100">100자 이내</option>
         <option value="200" selected>200자 이내 (권장)</option>
@@ -1375,7 +1411,7 @@
     </div>
 
     <div class="tb-group" id="achieveLevelGroup">
-      <span class="tb-label">성취</span>
+      <span class="tb-label">성취 <span class="tb-opt">선택</span></span>
       <button type="button" class="tb-mode-btn" data-level="상" onclick="toggleLevelBtn(this)">상</button>
       <button type="button" class="tb-mode-btn" data-level="중" onclick="toggleLevelBtn(this)">중</button>
       <button type="button" class="tb-mode-btn" data-level="하" onclick="toggleLevelBtn(this)">하</button>
@@ -1664,7 +1700,7 @@
     <a href="mailto:jerry5026@gmail.com">jerry5026@gmail.com</a>
   </div>
   <div class="meta-line">
-    마지막 업데이트 <span id="lastUpdateDate">—</span> · v2.0.1 · 계속 다듬어 나가는 중입니다
+    마지막 업데이트 <span id="lastUpdateDate">—</span> · v2.0.2 · 계속 다듬어 나가는 중입니다
   </div>
 </footer>
 
