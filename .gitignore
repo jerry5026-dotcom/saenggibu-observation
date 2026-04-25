@@ -1,0 +1,17 @@
+# Claude Code 로컬 설정·캐시
+.claude/
+
+# OS·에디터 부산물
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# 환경 변수
+.env
+.env.local
+
+# Vercel 로컬 빌드
+.vercel/
+node_modules/
