@@ -162,7 +162,7 @@ RUBRIC_OCR_MAX_TOKENS: 2000
 
 ### `PROVIDER_MODELS` (1599~1618줄) — AI 모델 목록
 - **anthropic**: `claude-sonnet-4-6` (권장), `claude-opus-4-7`, `claude-haiku-4-5` — 전부 유료
-- **openai**: `gpt-5.4-mini` (권장), `gpt-5.5` (최고품질), `gpt-5.4-nano` — 전부 유료
+- **openai**: `gpt-5.4-mini` (권장), `gpt-5.5`, `gpt-5.5-pro` (최고품질) — 전부 유료
 - **gemini**: `gemini-3-flash-preview` (권장·무료), `gemini-3.1-pro-preview` (유료), `gemini-3.1-flash-lite-preview` (무료)
 
 > 모델은 공식 문서 기준 최신 3종으로 유지. 새 버전 출시 시 이 배열만 갱신하면 UI에 자동 반영됨.
