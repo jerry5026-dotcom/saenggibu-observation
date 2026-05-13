@@ -300,8 +300,8 @@ CSS 미디어쿼리는 462줄(900px), 491줄(600px), 672줄(400px)부터.
 - `.gitignore`, 설정 파일
 
 ### 현재 버전
-- 표기: `v2.0.0`
-- v1.0 → v2.0.0: 레이아웃 전면 개편 — 좌측 사이드바(350px)를 가로 컴팩트 툴바로 전환, 사용 방법·체크리스트·이력·API 키를 모달 4종으로 분리
+- 표기: **`v2.0.6`** (2026-05 기준)
+- 자세한 변경 이력은 §15 참조
 
 ---
 
@@ -339,3 +339,96 @@ CSS 미디어쿼리는 462줄(900px), 491줄(600px), 672줄(400px)부터.
 2. `git add` → `git commit` → `git push origin main`
 3. Vercel이 GitHub webhook으로 자동 빌드·배포 (보통 30초~1분)
 4. 배포 완료 후 푸터의 "마지막 업데이트" 날짜가 새 커밋 날짜로 자동 갱신됨
+
+---
+
+## 15. 작업 이력 (Changelog) — 향후 세션 인계용
+
+> 이 섹션은 **다음 세션에서 작업을 이어받을 때 맥락을 빠르게 파악**할 수 있도록 정리한 것입니다.
+> 새로운 작업이 끝날 때마다 항목을 추가해 주세요.
+
+### v1.0 → v2.0.0 (메이저 — 레이아웃 전면 개편) `33d8130`
+**변경 동기**: 좌측 350px 사이드바에 11개 카드가 세로로 줄지어 있어 작업 흐름이 직관적이지 않다는 사용자 피드백.
+
+**핵심 변경**:
+- 사이드바 제거 → **가로 컴팩트 툴바 2줄** (Row 1: 모드·AI, Row 2: 수업정보)
+- 길거나 선택적인 콘텐츠 4종을 **모달로 분리**:
+  1. **사용 방법 모달** (`guideModal`) — 첫 방문 시 자동 표시 (`app_guideShown` localStorage). 7단계 STEP + "왜 필요한가" + 추천 대상 + 알아두실 점 등 풍부한 사용자 가이드 포함.
+  2. **체크리스트 모달** (`checklistModal`) — 발표/협업 두 탭. 입력 항목 수 배지 표시.
+  3. **분석 이력 모달** (`historyModal`) — 헤더 버튼 → 모달.
+  4. **API 키 관리 모달** (`apiKeyModal`) — 헤더 버튼이 키 상태에 따라 "🔑 키 없음" vs "🔑 ✓"로 동적 표시.
+- 결과 카드는 **메인 영역 안에 그대로 펼침** (별도 영역 X).
+- 헤더 버튼 5개: 📖 사용방법, 📚 이력, 🔑 키 관리, 🔄 초기화, 🔗 생기부 도우미 Ⅱ.
+
+**호환성 보장**:
+- 모든 `localStorage` 키와 IndexedDB 스토어 그대로 유지 (기존 사용자 데이터 보존).
+- 모든 기존 JS 함수 시그니처 유지. `toggleAct`/`toggleLevel`은 호환 stub로 남김.
+- `_updateLevelSummaryHint` 등 일부 함수는 no-op stub로 유지 (옛 콜 사이트 보호용).
+
+**새 모달 인프라**:
+- `openModal(id)` / `closeModal(id)` — ESC·배경클릭·스크롤 잠금 처리.
+- 모달별 초기화 훅: `historyModal` 열 때 `loadAndRenderHistory`, `apiKeyModal` 열 때 키 상태 갱신.
+- `closeGuideModal()` — "다음에 띄우지 않기" 체크박스 처리.
+- `switchChecklistTab(tab)` — 모달 내 탭 전환.
+- `_updateChecklistBadge()` — 헤더 배지 카운트.
+
+**작업 방식**: 워크트리 격리된 에이전트로 진행 후 메인 클로드가 정적 검증·머지·배포.
+
+---
+
+### v2.0.1 — 체크리스트 버튼 재배치 `3abfb3f`
+체크리스트는 발표·협업 활동과 직접 연관 → 헤더가 아닌 **툴바 Row 2의 활동 그룹 바로 뒤**로 이동. 헤더 간소화.
+
+### v2.0.2 — 시각 구분 + 필수/선택 배지 `0a2c3e1`
+- 활동 ↔ 체크리스트 사이에 **세로 구분선**(`.tb-divider`) + 체크리스트 버튼에 **호박색 톤**(`.tb-checklist-btn`)으로 시각 분리.
+- 모든 툴바 항목에 **(필수)/(선택) 배지** 부착:
+  - 필수(빨강 `.tb-req`): 모드, AI, 과목, 글자수
+  - 선택(회색 `.tb-opt`): 활동, 체크리스트, 주제, 성취
+
+### v2.0.3 → v2.0.4 — 푸터 블로그 링크 `deb08cd`, `1224c96`
+- 푸터에 블로그 링크 추가 → 이름·URL 수정.
+- **현재 상태**: "**교무실 옆 작업실**" → `https://jerry5026-dotcom.github.io/`
+
+### v2.0.5 → v2.0.6 — OpenAI 모델 라인업 갱신 `6c5304e`, `f7ea520`
+- **GPT-5.5 출시(2026.04.23)** 반영. 그러나 `5.5-mini`/`5.5-nano`는 아직 미출시 → mini는 5.4 유지.
+- **최종 라인업** (`PROVIDER_MODELS.openai`):
+  1. `gpt-5.4-mini` — 균형 · 권장 · 유료
+  2. `gpt-5.5` — 최신 고품질 · 유료
+  3. `gpt-5.5-pro` — 최고품질 · 유료
+- 품질 부족 우려로 **`gpt-5.4-nano` 제거**, `gpt-5.5-pro`로 교체.
+
+### Claude/Gemini 모델 상태 확인 (2026-05) — 변경 없음
+- **Claude**: Opus 4.7 (2026.04.16) / Sonnet 4.6 (권장, 2026.02) / Haiku 4.5 — 모두 최신.
+- **Gemini**: 3.1 Pro Preview / 3 Flash Preview (권장) / 3.1 Flash-Lite Preview — 모두 최신.
+- ⚠️ 주의: Gemini 3 Flash가 GA로 승격될 가능성 있어, 어느 날 `-preview` 접미어를 떼야 할 수도 있음.
+
+### CLAUDE.md 익명화 `de0aa6d`
+사용자 표기에서 이름·학교명 제거. 코드 동작·웹앱 화면에는 영향 없음 (메타 문서 작업이라 버전 안 올림).
+
+---
+
+## 16. 향후 세션 빠른 시작 가이드
+
+새 세션에서 작업을 이어받을 때 추천 절차:
+
+1. **이 파일(`CLAUDE.md`) 통독** — 특히 §15 작업 이력
+2. **`git log --oneline -20`** 으로 최근 커밋 확인
+3. 사용자 요청 들으면:
+   - **버전 영향 판단** (§11 규칙 따라 major/minor/patch 결정)
+   - **단일 파일 Edit이 어려운 큰 작업**이면 worktree 격리 에이전트 사용 검토
+4. **수정 후 정적 검증** (Grep으로 onclick·ID 매칭 확인) → 커밋 → push
+5. 커밋 메시지 끝에 `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` trailer 필수
+6. **destructive git 금지** (사용자 명시 요청 없으면 force push·reset --hard 절대 금지)
+
+### 자주 묻는 위치 (line number 무관, 함수명/ID로 찾기)
+| 찾을 것 | 방법 |
+|---------|------|
+| 모델 추가 | `Grep "PROVIDER_MODELS"` |
+| 모달 인프라 | `Grep "function openModal"` |
+| 푸터 | `Grep "page-footer"` |
+| 첫 방문 자동 모달 | `Grep "app_guideShown"` |
+| 메인 분석 플로우 | `Grep "function startAnalysis"` |
+| 채점 결과 렌더 | `Grep "renderGradingCard"` |
+| 통합 엑셀 내보내기 | `Grep "exportCombinedXLSX"` |
+
+> v2.0 리팩터링 이후 `index.html`은 약 4400줄. §8 함수 인덱스의 라인 번호는 v1.0 기준이라 ~280줄씩 밀려 있을 수 있음. **함수명/ID로 Grep해서 정확한 위치를 잡는 게 더 안전합니다.**
